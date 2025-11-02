@@ -1,6 +1,6 @@
 [versions]
 agp = "8.13.0"
-kotlin = "2.0.21"
+kotlin = "2.2.21"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -15,6 +15,8 @@ koin = "3.5.6"
 datastore = "1.1.7"
 androidx-materialIconsExtended = "1.7.8"
 compose-webview = "2.0.3"
+filekit = "0.12.0"
+poi = "5.2.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +53,19 @@ androidx-compose-material-iconsExtended = { group = "androidx.compose.material",
 
 #WebView
 compose-webview-multiplatform = { group = "io.github.kevinnzou", name = "compose-webview-multiplatform", version.ref = "compose-webview" }
+
+#FileKit
+filekit-core = { group = "io.github.vinceglb", name = "filekit-core", version.ref = "filekit" }
+filekit-compose-android = { group = "io.github.vinceglb", name = "filekit-compose-android", version.ref = "filekit" }
+filekit-coil = { group = "io.github.vinceglb", name = "filekit-coil", version.ref = "filekit" }
+
+#Real XLSX File
+apache-poi = { group = "org.apache.poi", name = "poi", version.ref = "poi" }
+apache-poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
+android-desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.0.4" }
+
+#Shimmer
+shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version = "1.3.3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

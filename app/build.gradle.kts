@@ -19,6 +19,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -33,6 +35,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -76,6 +79,14 @@ dependencies {
     implementation(libs.compose.webview.multiplatform)
 
     //FileKit
-//    implementation(libs.filekit.core)
-//    implementation(libs.filekit.coil)
+    implementation(libs.filekit.core)
+    implementation(libs.filekit.coil)
+
+    //Read XLSX File
+    implementation(libs.apache.poi)
+    implementation(libs.apache.poi.ooxml)
+    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
+
+    //Shimmer
+    implementation(libs.shimmer)
 }
