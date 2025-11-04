@@ -1,10 +1,11 @@
 package com.xliiicxiv.scrapper.state
 
 import android.net.Uri
+import com.xliiicxiv.scrapper.dataclass.SiipResult
 
 data class SiipBpjsState(
 
-    val isLoggedIn: Boolean = false,
+    val isLoggedIn: Boolean = true,
 
     val extendedMenu: Boolean = false,
 
@@ -14,5 +15,10 @@ data class SiipBpjsState(
     val rawList: List<String> = emptyList(),
 
     val isStarted: Boolean = false,
+
+    val success : Int = 0,
+    val failure : Int = 0,
+
+    val siipResult: List<SiipResult> = emptyList()
 
 )

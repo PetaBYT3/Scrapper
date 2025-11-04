@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Start
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -77,6 +78,7 @@ private fun Content(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(horizontal = 15.dp)
             .verticalScroll(
                 state = scrollState,
                 enabled = true
@@ -109,35 +111,34 @@ private fun Content(
             )
         )
         menuList.forEach { menuItem ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        enabled = true,
-                        onClick = {
-                            menuItem.onClick.invoke()
-                        }
-                    )
+            Card(
+                onClick = { menuItem.onClick.invoke() }
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(15.dp)
                 ) {
-                    Icon(
+                    Row(
                         modifier = Modifier
-                            .fillMaxHeight(),
-                        imageVector = menuItem.icon,
-                        contentDescription = null
-                    )
-                    HorizontalSpacer(15)
-                    Column {
-                        CustomTextTitle(text = menuItem.title)
-                        VerticalSpacer(5)
-                        CustomTextHint(text = menuItem.content)
+                            .fillMaxWidth()
+                            .padding(15.dp)
+                    ) {
+                        Icon(
+                            modifier = Modifier
+                                .fillMaxHeight(),
+                            imageVector = menuItem.icon,
+                            contentDescription = null
+                        )
+                        HorizontalSpacer(15)
+                        Column {
+                            CustomTextTitle(text = menuItem.title)
+                            VerticalSpacer(10)
+                            CustomTextHint(text = menuItem.content)
+                        }
                     }
                 }
             }
+            VerticalSpacer(10)
         }
     }
 }

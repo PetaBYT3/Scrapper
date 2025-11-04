@@ -1,6 +1,7 @@
 package com.xliiicxiv.scrapper.action
 
 import android.net.Uri
+import com.xliiicxiv.scrapper.dataclass.SiipResult
 
 interface SiipBpjsAction {
 
@@ -17,5 +18,11 @@ interface SiipBpjsAction {
     data class RawList(val rawList: List<String>) : SiipBpjsAction
 
     data object IsStarted : SiipBpjsAction
+
+    data object Success : SiipBpjsAction
+
+    data object Failure : SiipBpjsAction
+
+    data class AddResult(val result: SiipResult) : SiipBpjsAction
 
 }

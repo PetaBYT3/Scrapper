@@ -48,6 +48,15 @@ class SiipBpjsViewModel(
             SiipBpjsAction.IsStarted -> {
                 isStarted()
             }
+            SiipBpjsAction.Success -> {
+                _state.update { it.copy(success = it.success + 1) }
+            }
+            SiipBpjsAction.Failure -> {
+                _state.update { it.copy(failure = it.failure + 1) }
+            }
+            is SiipBpjsAction.AddResult -> {
+                _state.update { it.copy(siipResult = it.siipResult + action.result) }
+            }
         }
     }
 

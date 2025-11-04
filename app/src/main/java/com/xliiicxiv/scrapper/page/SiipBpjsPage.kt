@@ -1,6 +1,8 @@
 package com.xliiicxiv.scrapper.page
 
 import android.net.Uri
+import android.provider.OpenableColumns
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -53,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -65,20 +68,29 @@ import androidx.navigation.NavController
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
 import com.multiplatform.webview.web.WebViewNavigator
+import com.multiplatform.webview.web.WebViewState
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewState
 import com.valentinilk.shimmer.shimmer
 import com.xliiicxiv.scrapper.action.SiipBpjsAction
+import com.xliiicxiv.scrapper.dataclass.SiipResult
 import com.xliiicxiv.scrapper.extension.parseXlsxFile
 import com.xliiicxiv.scrapper.state.SiipBpjsState
+import com.xliiicxiv.scrapper.string.SiipBPJSInput
+import com.xliiicxiv.scrapper.string.SiipBPJSLoginUrl
 import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
 import com.xliiicxiv.scrapper.viewmodel.SiipBpjsViewModel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import kotlin.coroutines.coroutineContext
 
 @Composable
 fun SiipBpjsPage(
@@ -107,7 +119,8 @@ private fun Scaffold(
 
     Scaffold(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .imePadding(),
         topBar = {
             TopBar(
                 navController = navController,
@@ -167,6 +180,7 @@ private fun Content(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val xlsxMimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     val xlsxPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -174,7 +188,7 @@ private fun Content(
             if (uri != null) {
                 context.contentResolver.query(uri, null, null, null, null)?. use { cursor ->
                     if (cursor.moveToFirst()) {
-                        val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                         if (nameIndex != -1) {
                             onAction(SiipBpjsAction.SheetUri(uri = uri))
                             onAction(SiipBpjsAction.SheetName(name = cursor.getString(nameIndex)))
@@ -190,11 +204,10 @@ private fun Content(
             .padding(horizontal = 15.dp)
             .verticalScroll(state = scrollState, enabled = true),
     ) {
-        val url = "https://sipp.bpjsketenagakerjaan.go.id/tenaga-kerja/baru/form-tambah-tk-individu"
-        val webState = rememberWebViewState(url = url)
+        val webState = rememberWebViewState(url = SiipBPJSLoginUrl)
         Card(
             modifier = Modifier
-                .weight(1f)
+                .weight(1f),
         ) {
             Box(
                 modifier = Modifier
@@ -216,11 +229,12 @@ private fun Content(
                     }
                     else -> {}
                 }
-
-                val loggedDetection = "document.getElementById('form-login') == null"
-                webViewNavigator.evaluateJavaScript(script = loggedDetection) {
-                    onAction(SiipBpjsAction.IsLoggedIn(it.toBoolean()))
-                }
+                AutoCheck(
+                    webViewNavigator = webViewNavigator,
+                    webViewState = webState,
+                    state = state,
+                    onAction = onAction
+                )
             }
         }
         VerticalSpacer(10)
@@ -286,10 +300,10 @@ private fun Content(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Column() {
-                                                CustomTextContent(text = "${state.rawList.size} Rows Detected")
+                                                CustomTextContent(text = "${state.rawList.size} Data Detected")
                                                 VerticalSpacer(10)
-                                                CustomTextContent(text = "Success : ")
-                                                CustomTextContent(text = "Failed : ")
+                                                CustomTextContent(text = "Success : ${state.success}")
+                                                CustomTextContent(text = "Failed : ${state.failure}")
                                             }
                                             Spacer(Modifier.weight(1f))
                                         }
@@ -311,7 +325,8 @@ private fun Content(
                                         } else {
                                             MaterialTheme.colorScheme.primary
                                         }
-                                    )
+                                    ),
+                                    enabled = state.rawList.isNotEmpty()
                                 ) {
                                     Icon(
                                         imageVector = if (state.isStarted) Icons.Filled.Stop else Icons.Filled.PlayArrow,
@@ -344,14 +359,91 @@ private fun Content(
     VerticalSpacer(10)
 }
 
-private fun jsinjection() {
-//    val script2 = "document.querySelector('button[href=\"#collapseTwo\"]').click();"
-//    webViewNavigator.evaluateJavaScript(script = script2)
-//
-//    val script3 = "(function() { document.querySelector('#kpj').value = '12039136994'; })()"
-//    webViewNavigator.evaluateJavaScript(script = script3)
-//
-//    val script4 = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Lanjut'))?.click();"
-//    webViewNavigator.evaluateJavaScript(script = script4)
+@Composable
+private fun LoginDetection(
+    webViewNavigator: WebViewNavigator,
+    state: (SiipBpjsState),
+    onAction: (SiipBpjsAction) -> Unit
+) {
+    val loggedDetection = "document.getElementById('form-login') != null"
+    webViewNavigator.evaluateJavaScript(script = loggedDetection) {
+        onAction(SiipBpjsAction.IsLoggedIn(it.toBoolean()))
+    }
+    LaunchedEffect(state.isLoggedIn) {
+        if (state.isLoggedIn) {
+            webViewNavigator.loadUrl("https://sipp.bpjsketenagakerjaan.go.id/tenaga-kerja/baru/form-tambah-tk-individu")
+        }
+        delay(1000)
+    }
+}
+
+@Composable
+private fun AutoCheck(
+    webViewNavigator: WebViewNavigator,
+    webViewState: WebViewState,
+    state: (SiipBpjsState),
+    onAction: (SiipBpjsAction) -> Unit
+) {
+    LaunchedEffect(state.isStarted) {
+        if (!state.isStarted) return@LaunchedEffect
+
+        for (rawString in state.rawList) {
+
+            var isFail = false
+
+            webViewNavigator.loadUrl(SiipBPJSInput)
+
+            snapshotFlow { webViewState.loadingState }
+                .filterIsInstance<LoadingState.Finished>()
+                .first()
+
+            val btnSudah = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Sudah'))?.click();"
+            webViewNavigator.evaluateJavaScript(script = btnSudah)
+
+            snapshotFlow { webViewState.loadingState }
+                .filterIsInstance<LoadingState.Finished>()
+                .first()
+
+            val tfKpj = "document.querySelector('input[placeholder=\"Input No KPJ\"]').value = '$rawString';"
+            webViewNavigator.evaluateJavaScript(script = tfKpj)
+            delay(500L)
+
+            val btnLanjut = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Lanjut'))?.click();"
+            webViewNavigator.evaluateJavaScript(script = btnLanjut)
+
+            snapshotFlow { webViewState.loadingState }
+                .filterIsInstance<LoadingState.Finished>()
+                .first()
+
+            delay(5000)
+            val successDetection = "document.querySelector('.swal2-title').textContent;"
+
+            webViewNavigator.evaluateJavaScript(script = successDetection) {
+                if (it.contains("Berhasil!")) {
+                    onAction(SiipBpjsAction.Success)
+
+                } else {
+                    onAction(SiipBpjsAction.Failure)
+                    isFail = true
+                }
+            }
+
+            if (isFail) {
+                Log.d("SIIP", "Fail")
+                continue
+            }
+
+            val continueButton = "document.querySelector('.swal2-confirm').click();"
+            webViewNavigator.evaluateJavaScript(continueButton)
+
+            snapshotFlow { webViewState.loadingState }
+                .filterIsInstance<LoadingState.Finished>()
+                .first()
+
+            Log.d("SIIP", "Success")
+
+            delay(5000)
+        }
+    }
 }
 
