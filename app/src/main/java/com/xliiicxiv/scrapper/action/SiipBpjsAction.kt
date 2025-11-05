@@ -19,10 +19,16 @@ interface SiipBpjsAction {
 
     data object IsStarted : SiipBpjsAction
 
+    data object StopBottomSheet : SiipBpjsAction
+
     data object Success : SiipBpjsAction
 
     data object Failure : SiipBpjsAction
 
+    data object Process : SiipBpjsAction
+
     data class AddResult(val result: SiipResult) : SiipBpjsAction
+
+    data class ShowSnackbar(val message: String) : SiipBpjsAction
 
 }

@@ -1,0 +1,102 @@
+package com.xliiicxiv.scrapper.util
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.xliiicxiv.scrapper.template.CustomTextContent
+import com.xliiicxiv.scrapper.template.HorizontalSpacer
+import com.xliiicxiv.scrapper.template.VerticalSpacer
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomBottomSheetMessage(
+    title: String,
+
+) {
+    ModalBottomSheet(
+        onDismissRequest = {},
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp)
+            ) {
+
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomBottomSheetConfirmation(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        sheetState = sheetState,
+        onDismissRequest = { onCancel.invoke() },
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                VerticalSpacer(15)
+                CustomTextContent(text = message)
+                VerticalSpacer(15)
+                Row() {
+                    Spacer(Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                onCancel.invoke()
+                            }
+                        }
+                    ) {
+                        Text(text = "No")
+                    }
+                    HorizontalSpacer(20)
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                onConfirm.invoke()
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                onCancel.invoke()
+                            }
+                        }
+                    ) {
+                        Text(text = "Yes")
+                    }
+                }
+                VerticalSpacer(10)
+            }
+        }
+    )
+}

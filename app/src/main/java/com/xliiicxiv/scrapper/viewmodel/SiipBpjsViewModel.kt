@@ -6,10 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.SiipBpjsAction
+import com.xliiicxiv.scrapper.effect.SiipBpjsEffect
 import com.xliiicxiv.scrapper.extension.parseSingleColumnExcel
-import com.xliiicxiv.scrapper.extension.parseXlsxFile
 import com.xliiicxiv.scrapper.state.SiipBpjsState
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.update
@@ -25,28 +27,46 @@ class SiipBpjsViewModel(
     private val _state = MutableStateFlow(SiipBpjsState())
     val state = _state.asStateFlow()
 
+    private val _effect = MutableSharedFlow<SiipBpjsEffect>()
+    val effect = _effect.asSharedFlow()
+
     fun onAction(action: SiipBpjsAction) {
         when (action) {
             is SiipBpjsAction.IsLoggedIn -> {
-                isLoggedIn(action.isLoggedIn)
+                _state.update { it.copy(isLoggedIn = action.isLoggedIn) }
             }
             SiipBpjsAction.ExtendedMenu -> {
-                extendedMenu()
+                _state.update { it.copy(extendedMenu = !it.extendedMenu) }
             }
             is SiipBpjsAction.SheetUri -> {
-                sheetUri(action.uri)
+                _state.update { it.copy(sheetUri = action.uri) }
+                viewModelScope.launch {
+                    if (action.uri != null) {
+                        parseSingleColumnExcel(context, action.uri).collect { rawString ->
+                            _state.update { it.copy(rawList = it.rawList + rawString) }
+                        }
+                    }
+                }
             }
             is SiipBpjsAction.SheetName -> {
-                sheetName(action.name)
+                _state.update { it.copy(sheetName = action.name) }
             }
             SiipBpjsAction.DeleteSheet -> {
-                deleteSheet()
+                _state.update { it.copy(
+                    sheetName = null,
+                    sheetUri = null,
+                    process = 0,
+                    rawList = emptyList(),
+                ) }
             }
             is SiipBpjsAction.RawList -> {
-                rawList(action.rawList)
+                _state.update { it.copy(rawList = action.rawList) }
             }
             SiipBpjsAction.IsStarted -> {
-                isStarted()
+                _state.update { it.copy(isStarted = !it.isStarted) }
+            }
+            SiipBpjsAction.StopBottomSheet -> {
+                _state.update { it.copy(stopBottomSheet = !it.stopBottomSheet) }
             }
             SiipBpjsAction.Success -> {
                 _state.update { it.copy(success = it.success + 1) }
@@ -57,45 +77,14 @@ class SiipBpjsViewModel(
             is SiipBpjsAction.AddResult -> {
                 _state.update { it.copy(siipResult = it.siipResult + action.result) }
             }
-        }
-    }
-
-    private fun isLoggedIn(isLoggedIn: Boolean) {
-        _state.update { it.copy(isLoggedIn = isLoggedIn) }
-    }
-
-    private fun extendedMenu() {
-        _state.update { it.copy(extendedMenu = !it.extendedMenu) }
-    }
-
-    private fun sheetUri(uri: Uri?) {
-        _state.update { it.copy(sheetUri = uri) }
-        viewModelScope.launch {
-            if (uri != null) {
-                parseSingleColumnExcel(context, uri).collect { rawString ->
-                    _state.update { it.copy(rawList = it.rawList + rawString) }
+            SiipBpjsAction.Process -> {
+                _state.update { it.copy(process = it.process + 1) }
+            }
+            is SiipBpjsAction.ShowSnackbar -> {
+                viewModelScope.launch {
+                    _effect.emit(SiipBpjsEffect.ShowSnackbar(action.message))
                 }
             }
         }
-    }
-
-    private fun sheetName(name: String) {
-        _state.update { it.copy(sheetName = name) }
-    }
-
-    private fun deleteSheet() {
-        _state.update { it.copy(
-            sheetName = null,
-            sheetUri = null,
-            rawList = emptyList()
-        ) }
-    }
-
-    private fun rawList(rawList: List<String>) {
-        _state.update { it.copy(rawList = rawList) }
-    }
-
-    private fun isStarted() {
-        _state.update { it.copy(isStarted = !it.isStarted) }
     }
 }

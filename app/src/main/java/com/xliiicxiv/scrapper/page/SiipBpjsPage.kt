@@ -3,6 +3,7 @@ package com.xliiicxiv.scrapper.page
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Warning
@@ -44,6 +46,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -74,15 +78,19 @@ import com.multiplatform.webview.web.rememberWebViewState
 import com.valentinilk.shimmer.shimmer
 import com.xliiicxiv.scrapper.action.SiipBpjsAction
 import com.xliiicxiv.scrapper.dataclass.SiipResult
-import com.xliiicxiv.scrapper.extension.parseXlsxFile
+import com.xliiicxiv.scrapper.effect.SiipBpjsEffect
+import com.xliiicxiv.scrapper.extension.exportToExcelSiip
+import com.xliiicxiv.scrapper.extension.waitWebViewToLoad
 import com.xliiicxiv.scrapper.state.SiipBpjsState
 import com.xliiicxiv.scrapper.string.SiipBPJSInput
 import com.xliiicxiv.scrapper.string.SiipBPJSLoginUrl
+import com.xliiicxiv.scrapper.string.siipPath
 import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
+import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmation
 import com.xliiicxiv.scrapper.viewmodel.SiipBpjsViewModel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -90,30 +98,53 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import kotlin.coroutines.coroutineContext
 
 @Composable
 fun SiipBpjsPage(
     navController: NavController,
     viewModel: SiipBpjsViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val state by viewModel.state.collectAsStateWithLifecycle()
     val onAction = viewModel::onAction
 
     Scaffold(
         navController = navController,
         state = state,
-        onAction = onAction
+        onAction = onAction,
+        snackbarHostState = snackbarHostState
     )
 
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect {
+            when (it) {
+                is SiipBpjsEffect.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(
+                        message = it.message,
+                        withDismissAction = true
+                    )
+                }
+            }
+        }
+    }
+
+    if (state.stopBottomSheet) {
+        CustomBottomSheetConfirmation(
+            title = "Stop Process",
+            message = "Are you sure you want to stop the process?, Some data may not be collected",
+            onConfirm = { onAction(SiipBpjsAction.IsStarted) },
+            onCancel = { onAction(SiipBpjsAction.StopBottomSheet) }
+        )
+    }
 }
 
 @Composable
 private fun Scaffold(
     navController: NavController,
     state: (SiipBpjsState),
-    onAction: (SiipBpjsAction) -> Unit
+    onAction: (SiipBpjsAction) -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     val webViewNavigator = rememberWebViewNavigator()
 
@@ -124,7 +155,9 @@ private fun Scaffold(
         topBar = {
             TopBar(
                 navController = navController,
-                webViewNavigator = webViewNavigator
+                webViewNavigator = webViewNavigator,
+                state = state,
+                onAction = onAction
             )
         },
         content = { innerPadding ->
@@ -136,10 +169,11 @@ private fun Scaffold(
                 Content(
                     webViewNavigator = webViewNavigator,
                     state = state,
-                    onAction = onAction
+                    onAction = onAction,
                 )
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     )
 }
 
@@ -147,13 +181,21 @@ private fun Scaffold(
 @Composable
 private fun TopBar(
     navController: NavController,
-    webViewNavigator: WebViewNavigator
+    webViewNavigator: WebViewNavigator,
+    state: (SiipBpjsState),
+    onAction: (SiipBpjsAction) -> Unit
 ) {
 
     TopAppBar(
         navigationIcon = { CustomIconButton(
             imageVector = Icons.Filled.ArrowBack,
-            onClick = { navController.popBackStack() }
+            onClick = {
+                if (state.isStarted) {
+                    onAction(SiipBpjsAction.ShowSnackbar("Please Stop Process First"))
+                } else {
+                    navController.popBackStack()
+                }
+            }
         ) },
         title = { Text(text = "SIIP BPJS") },
         actions = {
@@ -162,10 +204,13 @@ private fun TopBar(
                     imageVector = Icons.Filled.RestartAlt,
                     onClick = { webViewNavigator.reload() }
                 )
-                HorizontalSpacer(5)
                 CustomIconButton(
                     imageVector = Icons.Filled.ArrowBack,
                     onClick = { webViewNavigator.navigateBack() }
+                )
+                CustomIconButton(
+                    imageVector = Icons.Filled.QuestionMark,
+                    onClick = {  }
                 )
             }
         }
@@ -235,6 +280,16 @@ private fun Content(
                     state = state,
                     onAction = onAction
                 )
+                LaunchedEffect(state.isStarted) {
+                    if (!state.isStarted && state.siipResult.isNotEmpty()) {
+                        exportToExcelSiip(
+                            context = context,
+                            path = siipPath,
+                            fileName = "test.xlsx",
+                            siipResult = state.siipResult
+                        )
+                    }
+                }
             }
         }
         VerticalSpacer(10)
@@ -246,7 +301,7 @@ private fun Content(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CustomTextTitle(text = "Menu")
+                    CustomTextTitle(text = "Auto Checker")
                     Spacer(Modifier.weight(1f))
                     val animateRotation by animateFloatAsState(
                         targetValue = if (state.extendedMenu) 0f else 180f,
@@ -302,10 +357,10 @@ private fun Content(
                                             Column() {
                                                 CustomTextContent(text = "${state.rawList.size} Data Detected")
                                                 VerticalSpacer(10)
+                                                CustomTextContent(text = "Process : ${state.process} / ${state.rawList.size}")
                                                 CustomTextContent(text = "Success : ${state.success}")
                                                 CustomTextContent(text = "Failed : ${state.failure}")
                                             }
-                                            Spacer(Modifier.weight(1f))
                                         }
                                     }
                                 )
@@ -313,7 +368,13 @@ private fun Content(
                                 Button(
                                     modifier = Modifier
                                         .fillMaxWidth(),
-                                    onClick = { onAction(SiipBpjsAction.IsStarted) },
+                                    onClick = {
+                                        if (state.isStarted) {
+                                            onAction(SiipBpjsAction.StopBottomSheet)
+                                        } else {
+                                            onAction(SiipBpjsAction.IsStarted)
+                                        }
+                                    },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (state.isStarted) {
                                             MaterialTheme.colorScheme.error
@@ -384,66 +445,106 @@ private fun AutoCheck(
     state: (SiipBpjsState),
     onAction: (SiipBpjsAction) -> Unit
 ) {
+    var kpjNumber by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
+    var nikNumber by remember { mutableStateOf("") }
+    var birthDate by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+
+    var isKpjDetected by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.isStarted) {
         if (!state.isStarted) return@LaunchedEffect
 
         for (rawString in state.rawList) {
 
-            var isFail = false
+            kpjNumber = ""
+            fullName = ""
+            nikNumber = ""
+            birthDate = ""
+            email = ""
 
             webViewNavigator.loadUrl(SiipBPJSInput)
 
-            snapshotFlow { webViewState.loadingState }
-                .filterIsInstance<LoadingState.Finished>()
-                .first()
+            waitWebViewToLoad(webViewState = webViewState)
 
-            val btnSudah = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Sudah'))?.click();"
-            webViewNavigator.evaluateJavaScript(script = btnSudah)
+            val doneButton = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Sudah'))?.click();"
+            webViewNavigator.evaluateJavaScript(doneButton)
 
-            snapshotFlow { webViewState.loadingState }
-                .filterIsInstance<LoadingState.Finished>()
-                .first()
+            val kpjTextField = "document.querySelector('input[placeholder=\"Input No KPJ\"]').value = '$rawString';"
+            webViewNavigator.evaluateJavaScript(kpjTextField)
 
-            val tfKpj = "document.querySelector('input[placeholder=\"Input No KPJ\"]').value = '$rawString';"
-            webViewNavigator.evaluateJavaScript(script = tfKpj)
-            delay(500L)
+            val btnNext = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Lanjut'))?.click();"
+            webViewNavigator.evaluateJavaScript(btnNext)
 
-            val btnLanjut = "Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Lanjut'))?.click();"
-            webViewNavigator.evaluateJavaScript(script = btnLanjut)
+            waitWebViewToLoad(webViewState = webViewState)
 
-            snapshotFlow { webViewState.loadingState }
-                .filterIsInstance<LoadingState.Finished>()
-                .first()
-
-            delay(5000)
             val successDetection = "document.querySelector('.swal2-title').textContent;"
-
-            webViewNavigator.evaluateJavaScript(script = successDetection) {
+            webViewNavigator.evaluateJavaScript(successDetection) {
                 if (it.contains("Berhasil!")) {
-                    onAction(SiipBpjsAction.Success)
-
+                    isKpjDetected = true
                 } else {
-                    onAction(SiipBpjsAction.Failure)
-                    isFail = true
+                    isKpjDetected = false
                 }
             }
 
-            if (isFail) {
-                Log.d("SIIP", "Fail")
+            delay(7500)
+
+            if (!isKpjDetected) {
+                Log.d("SIIP", "KPJ Not Detected !")
+                onAction(SiipBpjsAction.Failure)
+                onAction(SiipBpjsAction.Process)
                 continue
+            }
+
+            Log.d("SIIP", "KPJ Detected !")
+
+            kpjNumber = rawString
+
+            val nameElement = "document.querySelector('.swal2-content').textContent;"
+            webViewNavigator.evaluateJavaScript(nameElement) {
+                val pattern = "atas nama (.*?) terdaftar".toRegex()
+                val filtering = pattern.find(it)
+
+                val nameResult = filtering?.groups?.get(1)?.value.toString()
+
+                fullName = nameResult
             }
 
             val continueButton = "document.querySelector('.swal2-confirm').click();"
             webViewNavigator.evaluateJavaScript(continueButton)
 
-            snapshotFlow { webViewState.loadingState }
-                .filterIsInstance<LoadingState.Finished>()
-                .first()
+            waitWebViewToLoad(webViewState = webViewState)
 
-            Log.d("SIIP", "Success")
+            val nikElement = "document.getElementById('no_identitas').value;"
+            webViewNavigator.evaluateJavaScript(nikElement) {
+                nikNumber = it
+            }
 
-            delay(5000)
+            val birthDateElement = "document.getElementById('tgl_lahir').value;"
+            webViewNavigator.evaluateJavaScript(birthDateElement) {
+                birthDate = it
+            }
+
+            val emailElement = "document.getElementById('email').value;"
+            webViewNavigator.evaluateJavaScript(emailElement) {
+                email = it
+            }
+
+            delay(10000)
+
+            val result = SiipResult(
+                kpjNumber = kpjNumber,
+                fullName = fullName,
+                nikNumber = nikNumber,
+                birthDate = birthDate,
+                email = email
+            )
+            onAction(SiipBpjsAction.AddResult(result = result))
+            onAction(SiipBpjsAction.Success)
+            onAction(SiipBpjsAction.Process)
         }
+        onAction(SiipBpjsAction.IsStarted)
     }
 }
 
