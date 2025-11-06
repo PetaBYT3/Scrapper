@@ -1,11 +1,9 @@
 package com.xliiicxiv.scrapper.state
 
 import android.net.Uri
-import com.xliiicxiv.scrapper.dataclass.SiipResult
+import com.xliiicxiv.scrapper.dataclass.DptResult
 
-data class SiipBpjsState(
-
-    val isLoggedIn: Boolean = true,
+data class DptState(
 
     val questionBottomSheet: Boolean = false,
 
@@ -14,7 +12,7 @@ data class SiipBpjsState(
     val sheetUri: Uri? = null,
     val sheetName: String? = null,
 
-    val rawList: List<String> = emptyList(),
+    val rawList: List<DptResult> = emptyList(),
 
     val deleteXlsxBottomSheet: Boolean = false,
 
@@ -25,6 +23,5 @@ data class SiipBpjsState(
     val success: Int = 0,
     val failure: Int = 0,
 
-    val siipResult: List<SiipResult> = emptyList()
-
+    val dptResult: List<DptResult> = emptyList(),
 )

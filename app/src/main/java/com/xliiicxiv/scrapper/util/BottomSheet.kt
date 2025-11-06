@@ -25,17 +25,92 @@ import kotlinx.coroutines.launch
 @Composable
 fun CustomBottomSheetMessage(
     title: String,
-
+    message: String,
+    onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState()
+
     ModalBottomSheet(
-        onDismissRequest = {},
+        sheetState = sheetState,
+        onDismissRequest = { onDismiss.invoke() },
         content = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 15.dp)
             ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                VerticalSpacer(15)
+                CustomTextContent(text = message)
+                VerticalSpacer(15)
+                Row() {
+                    Spacer(Modifier.weight(1f))
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                onDismiss.invoke()
+                            }
+                        }
+                    ) {
+                        Text(text = "Ok")
+                    }
+                }
+            }
+        }
+    )
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomBottomSheetMessageComposable(
+    title: String,
+    content: @Composable () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        sheetState = sheetState,
+        onDismissRequest = { onDismiss.invoke() },
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                VerticalSpacer(15)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    content.invoke()
+                }
+                VerticalSpacer(15)
+                Row() {
+                    Spacer(Modifier.weight(1f))
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                onDismiss.invoke()
+                            }
+                        }
+                    ) {
+                        Text(text = "Ok")
+                    }
+                }
             }
         }
     )

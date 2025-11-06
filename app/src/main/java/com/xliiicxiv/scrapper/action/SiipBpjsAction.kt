@@ -3,9 +3,11 @@ package com.xliiicxiv.scrapper.action
 import android.net.Uri
 import com.xliiicxiv.scrapper.dataclass.SiipResult
 
-interface SiipBpjsAction {
+sealed interface SiipBpjsAction {
 
     data class IsLoggedIn(val isLoggedIn: Boolean) : SiipBpjsAction
+
+    data object QuestionBottomSheet : SiipBpjsAction
 
     data object ExtendedMenu : SiipBpjsAction
 
@@ -13,7 +15,9 @@ interface SiipBpjsAction {
 
     data class SheetName(val name: String) : SiipBpjsAction
 
-    data object DeleteSheet : SiipBpjsAction
+    data object DeleteXlsx : SiipBpjsAction
+
+    data object DeleteXlsxBottomSheet : SiipBpjsAction
 
     data class RawList(val rawList: List<String>) : SiipBpjsAction
 

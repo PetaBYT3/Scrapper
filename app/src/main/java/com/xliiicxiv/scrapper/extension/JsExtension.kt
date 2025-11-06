@@ -1,5 +1,6 @@
 package com.xliiicxiv.scrapper.extension
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.snapshotFlow
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebViewNavigator
@@ -16,4 +17,11 @@ suspend fun waitWebViewToLoad(
         .filterIsInstance<LoadingState.Finished>()
         .first()
     delay(1000)
+}
+
+suspend fun waitUntilPageReady(pageReady: MutableState<Boolean>) {
+    while (!pageReady.value) {
+        delay(100)
+    }
+    delay(800)
 }

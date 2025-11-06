@@ -99,16 +99,16 @@ private fun Content(
             ),
             MenuItem(
                 icon = Icons.Rounded.Start,
+                title = "DPT",
+                content = "Cek DPT",
+                onClick = { navController.navigate(Route.DptPage) }
+            ),
+            MenuItem(
+                icon = Icons.Rounded.Start,
                 title = "Lasik",
                 content = "Cek Lasik",
                 onClick = { navController.navigate(Route.LasikPage) }
             ),
-            MenuItem(
-                icon = Icons.Rounded.Start,
-                title = "DPT",
-                content = "Cek DPT",
-                onClick = { navController.navigate(Route.DptPage) }
-            )
         )
         menuList.forEach { menuItem ->
             Card(

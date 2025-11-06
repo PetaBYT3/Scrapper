@@ -2,23 +2,22 @@ package com.xliiicxiv.scrapper.extension
 
 import android.content.Context
 import android.net.Uri
+import com.xliiicxiv.scrapper.dataclass.DptResult
 import com.xliiicxiv.scrapper.dataclass.SiipResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.DataFormatter
+import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import java.io.FileOutputStream
 import java.io.InputStream
 
-fun parseSingleColumnExcel(
+fun getKpjFromXlsx(
     context: Context,
     xlsxUri: Uri
 ): Flow<String> {
-
     return flow {
         var inputStream: InputStream? = null
 
@@ -34,6 +33,70 @@ fun parseSingleColumnExcel(
 
                 if (cellValue.isNotEmpty()) {
                     emit(cellValue)
+                }
+            }
+
+            workbook.close()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            inputStream?.close()
+        }
+    }.flowOn(Dispatchers.IO)
+}
+
+fun getNikFromXlsx(
+    context: Context,
+    xlsxUri: Uri
+): Flow<DptResult> {
+    return flow {
+        var inputStream: InputStream? = null
+
+        try {
+            inputStream = context.contentResolver.openInputStream(xlsxUri)
+            val workbook = WorkbookFactory.create(inputStream)
+            val sheet = workbook.getSheetAt(0)
+            val formatter = DataFormatter()
+
+            for (row in sheet) {
+                if (row.rowNum == 0) {
+                    continue
+                }
+
+                val kpjNumber = formatter.formatCellValue(
+                    row.getCell(0, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                ).trim()
+
+                val nikNumber = formatter.formatCellValue(
+                    row.getCell(1, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                ).trim()
+
+                val fullName = formatter.formatCellValue(
+                    row.getCell(2, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                ).trim()
+
+                val birthDate = formatter.formatCellValue(
+                    row.getCell(3, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                ).trim()
+
+                val email = formatter.formatCellValue(
+                    row.getCell(4, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                ).trim()
+
+                if (kpjNumber.isNotEmpty() && nikNumber.isNotEmpty()) {
+                    emit(
+                        DptResult(
+                            kpjNumber = kpjNumber,
+                            nikNumber = nikNumber,
+                            fullName = fullName,
+                            birthDate = birthDate,
+                            email = email,
+                            regencyName = "",
+                            subdistrictName = "",
+                            wardName = "",
+                        )
+                    )
                 }
             }
 

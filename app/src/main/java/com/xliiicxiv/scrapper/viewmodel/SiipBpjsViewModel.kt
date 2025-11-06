@@ -1,27 +1,26 @@
 package com.xliiicxiv.scrapper.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.SiipBpjsAction
 import com.xliiicxiv.scrapper.effect.SiipBpjsEffect
-import com.xliiicxiv.scrapper.extension.parseSingleColumnExcel
+import com.xliiicxiv.scrapper.effect.SiipBpjsEffect.*
+import com.xliiicxiv.scrapper.extension.getKpjFromXlsx
 import com.xliiicxiv.scrapper.state.SiipBpjsState
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.InputStream
 
 class SiipBpjsViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
+    @SuppressLint("StaticFieldLeak")
     private val context = application.applicationContext
 
     private val _state = MutableStateFlow(SiipBpjsState())
@@ -35,6 +34,9 @@ class SiipBpjsViewModel(
             is SiipBpjsAction.IsLoggedIn -> {
                 _state.update { it.copy(isLoggedIn = action.isLoggedIn) }
             }
+            SiipBpjsAction.QuestionBottomSheet -> {
+                _state.update { it.copy(questionBottomSheet = !it.questionBottomSheet) }
+            }
             SiipBpjsAction.ExtendedMenu -> {
                 _state.update { it.copy(extendedMenu = !it.extendedMenu) }
             }
@@ -42,7 +44,7 @@ class SiipBpjsViewModel(
                 _state.update { it.copy(sheetUri = action.uri) }
                 viewModelScope.launch {
                     if (action.uri != null) {
-                        parseSingleColumnExcel(context, action.uri).collect { rawString ->
+                        getKpjFromXlsx(context, action.uri).collect { rawString ->
                             _state.update { it.copy(rawList = it.rawList + rawString) }
                         }
                     }
@@ -51,11 +53,13 @@ class SiipBpjsViewModel(
             is SiipBpjsAction.SheetName -> {
                 _state.update { it.copy(sheetName = action.name) }
             }
-            SiipBpjsAction.DeleteSheet -> {
+            SiipBpjsAction.DeleteXlsx -> {
                 _state.update { it.copy(
                     sheetName = null,
                     sheetUri = null,
                     process = 0,
+                    success = 0,
+                    failure = 0,
                     rawList = emptyList(),
                 ) }
             }
@@ -64,6 +68,19 @@ class SiipBpjsViewModel(
             }
             SiipBpjsAction.IsStarted -> {
                 _state.update { it.copy(isStarted = !it.isStarted) }
+                if (_state.value.isStarted) {
+                    _state.update {
+                        it.copy(
+                            process = 0,
+                            success = 0,
+                            failure = 0,
+                            siipResult = emptyList(),
+                        )
+                    }
+                }
+            }
+            SiipBpjsAction.DeleteXlsxBottomSheet -> {
+                _state.update { it.copy(deleteXlsxBottomSheet = !it.deleteXlsxBottomSheet) }
             }
             SiipBpjsAction.StopBottomSheet -> {
                 _state.update { it.copy(stopBottomSheet = !it.stopBottomSheet) }
@@ -82,7 +99,7 @@ class SiipBpjsViewModel(
             }
             is SiipBpjsAction.ShowSnackbar -> {
                 viewModelScope.launch {
-                    _effect.emit(SiipBpjsEffect.ShowSnackbar(action.message))
+                    _effect.emit(ShowSnackbar(action.message))
                 }
             }
         }

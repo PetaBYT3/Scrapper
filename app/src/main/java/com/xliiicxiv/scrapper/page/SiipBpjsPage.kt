@@ -3,7 +3,6 @@ package com.xliiicxiv.scrapper.page
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
-import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -17,28 +16,24 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,24 +43,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -80,23 +72,24 @@ import com.xliiicxiv.scrapper.action.SiipBpjsAction
 import com.xliiicxiv.scrapper.dataclass.SiipResult
 import com.xliiicxiv.scrapper.effect.SiipBpjsEffect
 import com.xliiicxiv.scrapper.extension.exportToExcelSiip
+import com.xliiicxiv.scrapper.extension.getCurrentTime
+import com.xliiicxiv.scrapper.extension.removeDoubleQuote
 import com.xliiicxiv.scrapper.extension.waitWebViewToLoad
 import com.xliiicxiv.scrapper.state.SiipBpjsState
 import com.xliiicxiv.scrapper.string.SiipBPJSInput
 import com.xliiicxiv.scrapper.string.SiipBPJSLoginUrl
 import com.xliiicxiv.scrapper.string.siipPath
+import com.xliiicxiv.scrapper.string.xlsxMimeType
 import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
 import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmation
+import com.xliiicxiv.scrapper.util.CustomBottomSheetMessage
+import com.xliiicxiv.scrapper.util.CustomBottomSheetMessageComposable
 import com.xliiicxiv.scrapper.viewmodel.SiipBpjsViewModel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -104,6 +97,7 @@ fun SiipBpjsPage(
     navController: NavController,
     viewModel: SiipBpjsViewModel = koinViewModel()
 ) {
+    val view = LocalView.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -129,12 +123,42 @@ fun SiipBpjsPage(
         }
     }
 
+    DisposableEffect(state.isStarted) {
+        view.keepScreenOn = state.isStarted
+
+        onDispose {
+            view.keepScreenOn = false
+        }
+    }
+
     if (state.stopBottomSheet) {
         CustomBottomSheetConfirmation(
             title = "Stop Process",
             message = "Are you sure you want to stop the process?, Some data may not be collected",
             onConfirm = { onAction(SiipBpjsAction.IsStarted) },
             onCancel = { onAction(SiipBpjsAction.StopBottomSheet) }
+        )
+    }
+
+    if (state.questionBottomSheet) {
+        CustomBottomSheetMessageComposable(
+            title = "How To Use ?",
+            content = {
+                CustomTextTitle(text = "How to start the Auto Check ?")
+                CustomTextContent(text = "1. Login Into SIIP BPJS Web\n2. Select .xlsx File\n3. Click Start Button")
+                VerticalSpacer(10)
+                CustomTextTitle(text = "Where the result saved ?")
+                CustomTextContent(text = "Documents / Scrapper / Siip BPJS")
+            },
+            onDismiss = { onAction(SiipBpjsAction.QuestionBottomSheet) }
+        )
+    }
+
+    if (state.deleteXlsxBottomSheet) {
+        CustomBottomSheetMessage(
+            title = "Delete .XLSX File",
+            message = "Auto check is running, Stop it first to delete .xlsx file",
+            onDismiss = { onAction(SiipBpjsAction.DeleteXlsxBottomSheet) }
         )
     }
 }
@@ -185,32 +209,29 @@ private fun TopBar(
     state: (SiipBpjsState),
     onAction: (SiipBpjsAction) -> Unit
 ) {
-
     TopAppBar(
-        navigationIcon = { CustomIconButton(
-            imageVector = Icons.Filled.ArrowBack,
-            onClick = {
-                if (state.isStarted) {
-                    onAction(SiipBpjsAction.ShowSnackbar("Please Stop Process First"))
-                } else {
-                    navController.popBackStack()
+        navigationIcon = {
+            CustomIconButton(
+                imageVector = Icons.Filled.ArrowBack,
+                onClick = {
+                    if (state.isStarted) {
+                        onAction(SiipBpjsAction.ShowSnackbar("Please Stop Process First"))
+                    } else {
+                        navController.popBackStack()
+                    }
                 }
-            }
-        ) },
+            )
+        },
         title = { Text(text = "SIIP BPJS") },
         actions = {
             Row() {
                 CustomIconButton(
                     imageVector = Icons.Filled.RestartAlt,
-                    onClick = { webViewNavigator.reload() }
-                )
-                CustomIconButton(
-                    imageVector = Icons.Filled.ArrowBack,
-                    onClick = { webViewNavigator.navigateBack() }
+                    onClick = { webViewNavigator.loadUrl(SiipBPJSLoginUrl) }
                 )
                 CustomIconButton(
                     imageVector = Icons.Filled.QuestionMark,
-                    onClick = {  }
+                    onClick = { onAction(SiipBpjsAction.QuestionBottomSheet) }
                 )
             }
         }
@@ -223,10 +244,7 @@ private fun Content(
     state: (SiipBpjsState),
     onAction: (SiipBpjsAction) -> Unit
 ) {
-    val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val xlsxMimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     val xlsxPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
@@ -243,11 +261,11 @@ private fun Content(
             }
         },
     )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 15.dp)
-            .verticalScroll(state = scrollState, enabled = true),
+            .padding(horizontal = 10.dp),
     ) {
         val webState = rememberWebViewState(url = SiipBPJSLoginUrl)
         Card(
@@ -285,9 +303,10 @@ private fun Content(
                         exportToExcelSiip(
                             context = context,
                             path = siipPath,
-                            fileName = "test.xlsx",
+                            fileName = "SIIP Result ${getCurrentTime()}.xlsx",
                             siipResult = state.siipResult
                         )
+                        onAction(SiipBpjsAction.ShowSnackbar("File Saved !"))
                     }
                 }
             }
@@ -296,7 +315,7 @@ private fun Content(
         Card() {
             Column(
                 modifier = Modifier
-                    .padding(10.dp)
+                    .padding(horizontal = 15.dp, vertical = 10.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -336,7 +355,11 @@ private fun Content(
                                     IconButton(
                                         onClick = {
                                             if (state.sheetUri != null) {
-                                                onAction(SiipBpjsAction.DeleteSheet)
+                                                if (state.isStarted) {
+                                                    onAction(SiipBpjsAction.DeleteXlsxBottomSheet)
+                                                } else {
+                                                    onAction(SiipBpjsAction.DeleteXlsx)
+                                                }
                                             } else {
                                                 xlsxPicker.launch(xlsxMimeType)
                                             }
@@ -352,14 +375,59 @@ private fun Content(
                                     visible = state.sheetUri != null,
                                     content = {
                                         Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 10.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Column() {
-                                                CustomTextContent(text = "${state.rawList.size} Data Detected")
-                                                VerticalSpacer(10)
-                                                CustomTextContent(text = "Process : ${state.process} / ${state.rawList.size}")
-                                                CustomTextContent(text = "Success : ${state.success}")
-                                                CustomTextContent(text = "Failed : ${state.failure}")
+                                            Column(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.List,
+                                                        contentDescription = null
+                                                    )
+                                                    HorizontalSpacer(10)
+                                                    CustomTextContent(text = "${state.rawList.size} Data Detected")
+                                                    Spacer(Modifier.weight(1f))
+                                                }
+                                                VerticalSpacer(5)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Timelapse,
+                                                        contentDescription = null
+                                                    )
+                                                    HorizontalSpacer(10)
+                                                    CustomTextContent(text = "${state.process} / ${state.rawList.size} Process")
+                                                }
+                                                VerticalSpacer(5)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Check,
+                                                        contentDescription = null
+                                                    )
+                                                    HorizontalSpacer(10)
+                                                    CustomTextContent(text = "${state.success} Success")
+                                                }
+                                                VerticalSpacer(5)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Close,
+                                                        contentDescription = null
+                                                    )
+                                                    HorizontalSpacer(10)
+                                                    CustomTextContent(text = "${state.failure} Failed")
+                                                }
                                             }
                                         }
                                     }
@@ -518,20 +586,23 @@ private fun AutoCheck(
 
             val nikElement = "document.getElementById('no_identitas').value;"
             webViewNavigator.evaluateJavaScript(nikElement) {
-                nikNumber = it
+                val removedQuote = removeDoubleQuote(it)
+                nikNumber = removedQuote
             }
 
             val birthDateElement = "document.getElementById('tgl_lahir').value;"
             webViewNavigator.evaluateJavaScript(birthDateElement) {
-                birthDate = it
+                val removedQuote = removeDoubleQuote(it)
+                birthDate = removedQuote
             }
 
             val emailElement = "document.getElementById('email').value;"
             webViewNavigator.evaluateJavaScript(emailElement) {
-                email = it
+                val removedQuote = removeDoubleQuote(it)
+                email = removedQuote
             }
 
-            delay(10000)
+            delay(12_500)
 
             val result = SiipResult(
                 kpjNumber = kpjNumber,
@@ -543,6 +614,8 @@ private fun AutoCheck(
             onAction(SiipBpjsAction.AddResult(result = result))
             onAction(SiipBpjsAction.Success)
             onAction(SiipBpjsAction.Process)
+
+            delay(1000)
         }
         onAction(SiipBpjsAction.IsStarted)
     }

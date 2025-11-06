@@ -1,11 +1,8 @@
 package com.xliiicxiv.scrapper.state
 
 import android.net.Uri
-import com.xliiicxiv.scrapper.dataclass.SiipResult
 
-data class SiipBpjsState(
-
-    val isLoggedIn: Boolean = true,
+data class LasikState(
 
     val questionBottomSheet: Boolean = false,
 
@@ -24,7 +21,4 @@ data class SiipBpjsState(
     val process: Int = 0,
     val success: Int = 0,
     val failure: Int = 0,
-
-    val siipResult: List<SiipResult> = emptyList()
-
 )
