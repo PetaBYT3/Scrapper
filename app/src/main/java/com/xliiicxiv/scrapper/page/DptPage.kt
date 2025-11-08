@@ -2,11 +2,7 @@ package com.xliiicxiv.scrapper.page
 
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
-import android.view.View
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -42,53 +38,52 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import com.multiplatform.webview.web.AccompanistWebChromeClient
-import com.multiplatform.webview.web.LoadingState
-import com.multiplatform.webview.web.PlatformWebViewParams
-import com.multiplatform.webview.web.WebView
-import com.multiplatform.webview.web.WebViewNavigator
-import com.multiplatform.webview.web.WebViewState
-import com.multiplatform.webview.web.rememberWebViewNavigator
-import com.multiplatform.webview.web.rememberWebViewState
 import com.valentinilk.shimmer.shimmer
 import com.xliiicxiv.scrapper.action.DptAction
-import com.xliiicxiv.scrapper.action.LasikAction
 import com.xliiicxiv.scrapper.dataclass.DptResult
-import com.xliiicxiv.scrapper.extension.waitUntilPageReady
-import com.xliiicxiv.scrapper.extension.waitWebViewToLoad
+import com.xliiicxiv.scrapper.extension.AdvanceWebViewComposable
+import com.xliiicxiv.scrapper.extension.AdvanceWebViewControl
+import com.xliiicxiv.scrapper.extension.exportToExcelDpt
+import com.xliiicxiv.scrapper.extension.getCurrentTime
+import com.xliiicxiv.scrapper.extension.getRegencyName
+import com.xliiicxiv.scrapper.extension.getSubdistrictName
+import com.xliiicxiv.scrapper.extension.getWardName
+import com.xliiicxiv.scrapper.extension.rememberAdvanceViewControl
+import com.xliiicxiv.scrapper.extension.removeDoubleQuote
 import com.xliiicxiv.scrapper.state.DptState
+import com.xliiicxiv.scrapper.string.dptPath
 import com.xliiicxiv.scrapper.string.dptUrlInput
-import com.xliiicxiv.scrapper.string.lasikLoginUrl
-import com.xliiicxiv.scrapper.string.webUserAgent
 import com.xliiicxiv.scrapper.string.xlsxMimeType
 import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
+import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmation
+import com.xliiicxiv.scrapper.util.CustomBottomSheetMessage
+import com.xliiicxiv.scrapper.util.CustomBottomSheetMessageComposable
 import com.xliiicxiv.scrapper.viewmodel.DptViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import org.json.JSONObject
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -96,6 +91,9 @@ fun DptPage(
     navController: NavHostController,
     viewModel: DptViewModel = koinViewModel()
 ) {
+    val view = LocalView.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val state by viewModel.state.collectAsStateWithLifecycle()
     val onAction = viewModel::onAction
 
@@ -104,6 +102,47 @@ fun DptPage(
         state = state,
         onAction = onAction
     )
+
+    DisposableEffect(state.isStarted) {
+        view.keepScreenOn = state.isStarted
+
+        onDispose {
+            view.keepScreenOn = false
+        }
+    }
+
+    if (state.stopBottomSheet) {
+        CustomBottomSheetConfirmation(
+            title = "Stop Process",
+            message = "Are you sure you want to stop the process?, Some data may not be collected",
+            onConfirm = { onAction(DptAction.IsStarted) },
+            onCancel = { onAction(DptAction.StopBottomSheet) }
+        )
+    }
+
+    if (state.questionBottomSheet) {
+        CustomBottomSheetMessageComposable(
+            title = "How To Use ?",
+            content = {
+                CustomTextTitle(text = "How to start the DPT auto check ?")
+                VerticalSpacer(5)
+                CustomTextContent(text = "1. Wait until web page loaded\n2. Select .xlsx File\n3. Click Start Button")
+                VerticalSpacer(15)
+                CustomTextTitle(text = "Where the result saved ?")
+                VerticalSpacer(5)
+                CustomTextContent(text = "Documents / Scrapper / DPT")
+            },
+            onDismiss = { onAction(DptAction.QuestionBottomSheet) }
+        )
+    }
+
+    if (state.deleteXlsxBottomSheet) {
+        CustomBottomSheetMessage(
+            title = "Delete .XLSX File",
+            message = "Auto check is running, Stop it first to delete .xlsx file",
+            onDismiss = { onAction(DptAction.DeleteXlsxBottomSheet) }
+        )
+    }
 }
 
 @Composable
@@ -112,13 +151,13 @@ private fun Scaffold(
     state: DptState,
     onAction: (DptAction) -> Unit
 ) {
-    val webViewNavigator = rememberWebViewNavigator()
+    val advanceWebViewControl = rememberAdvanceViewControl()
 
     Scaffold(
         topBar = {
             TopBar(
                 navController = navController,
-                webViewNavigator = webViewNavigator,
+                advanceWebViewControl = advanceWebViewControl,
                 state = state,
                 onAction = onAction
             )
@@ -130,7 +169,7 @@ private fun Scaffold(
                     .padding(innerPadding)
             ) {
                 Content(
-                    webViewNavigator = webViewNavigator,
+                    advanceWebViewControl = advanceWebViewControl,
                     state = state,
                     onAction = onAction
                 )
@@ -143,7 +182,7 @@ private fun Scaffold(
 @Composable
 private fun TopBar(
     navController: NavController,
-    webViewNavigator: WebViewNavigator,
+    advanceWebViewControl: AdvanceWebViewControl,
     state: DptState,
     onAction: (DptAction) -> Unit
 ) {
@@ -165,7 +204,7 @@ private fun TopBar(
             Row() {
                 CustomIconButton(
                     imageVector = Icons.Filled.RestartAlt,
-                    onClick = { webViewNavigator.loadUrl(dptUrlInput) }
+                    onClick = { advanceWebViewControl.loadUrl(dptUrlInput) }
                 )
                 CustomIconButton(
                     imageVector = Icons.Filled.QuestionMark,
@@ -178,7 +217,7 @@ private fun TopBar(
 
 @Composable
 private fun Content(
-    webViewNavigator: WebViewNavigator,
+    advanceWebViewControl: AdvanceWebViewControl,
     state: DptState,
     onAction: (DptAction) -> Unit
 ) {
@@ -205,19 +244,6 @@ private fun Content(
             .fillMaxSize()
             .padding(horizontal = 10.dp),
     ) {
-        var pageReady = remember { mutableStateOf(false) }
-        val webState = rememberWebViewState(url = dptUrlInput)
-        val chromeClient = remember {
-            object : AccompanistWebChromeClient() {
-                override fun onProgressChanged(view: WebView, newProgress: Int) {
-                    if (newProgress == 100) {
-                        pageReady.value = true
-                    }
-                }
-            }
-        }
-        val platformParams = remember { PlatformWebViewParams(chromeClient = chromeClient) }
-
         Card(
             modifier = Modifier
                 .weight(1f),
@@ -226,39 +252,46 @@ private fun Content(
                 modifier = Modifier
                     .fillMaxSize()
             ) {
-                WebView(
+                var isLoading by remember { mutableStateOf(true) }
+                AdvanceWebViewComposable(
                     modifier = Modifier
                         .fillMaxSize(),
-                    state = webState,
-                    navigator = webViewNavigator,
-                    platformWebViewParams = platformParams,
-                    onCreated = { webView ->
-                        webView.settings.javaScriptEnabled = true
-                        webView.settings.domStorageEnabled = true
-                        webView.settings.userAgentString = webUserAgent
-                        webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
-                        webView.settings.setSupportZoom(false)
-                        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    url = dptUrlInput,
+                    advanceWebViewControl = advanceWebViewControl,
+                    onPageStarted = {
+                        isLoading = true
+                    },
+                    onPageFinished = {
+                        isLoading = false
+                    },
+                    onError = {
+                        advanceWebViewControl.loadUrl(dptUrlInput)
                     }
                 )
-                when (webState.loadingState) {
-                    is LoadingState.Loading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .shimmer()
-                        ) { Column(Modifier.fillMaxSize().background(Color.LightGray)) {} }
-                    }
-                    else -> {}
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .shimmer()
+                    ) { Column(Modifier.fillMaxSize().background(Color.LightGray)) {} }
                 }
                 AutoCheck(
-                    webViewNavigator = webViewNavigator,
-                    webViewState = webState,
+                    advanceWebViewControl = advanceWebViewControl,
                     state = state,
-                    onAction = onAction,
-                    pageReady = pageReady
+                    onAction = onAction
                 )
+                LaunchedEffect(state.isStarted) {
+                    if (!state.isStarted && state.dptResult.isNotEmpty()) {
+                        exportToExcelDpt(
+                            context = context,
+                            path = dptPath,
+                            fileName = "DPT Result ${getCurrentTime()}.xlsx",
+                            dptResult = state.dptResult
+                        )
+                        onAction(DptAction.StopBottomSheet)
+                        Toast.makeText(context, "Result Saved", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
         VerticalSpacer(10)
@@ -423,142 +456,112 @@ private fun Content(
 
 @Composable
 private fun AutoCheck(
-    webViewNavigator: WebViewNavigator,
-    webViewState: WebViewState,
+    advanceWebViewControl: AdvanceWebViewControl,
     state: DptState,
-    onAction: (DptAction) -> Unit,
-    pageReady: MutableState<Boolean>
+    onAction: (DptAction) -> Unit
 ) {
-    var kpjNumber by remember { mutableStateOf("") }
-    var nikNumber by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var birthDate by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var kabupaten by remember { mutableStateOf("") }
-    var kecamatan by remember { mutableStateOf("") }
-    var kelurahan by remember { mutableStateOf("") }
+    var regencyName by remember { mutableStateOf("") }
+    var subdistrictName by remember { mutableStateOf("") }
+    var wardName by remember { mutableStateOf("") }
+
     var isDataFound by remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(state.isStarted) {
-        if (!state.isStarted) {
-            pageReady.value = false
-            return@LaunchedEffect
-        }
+        if (!state.isStarted) return@LaunchedEffect
 
-        for (rawMap in state.rawList) {
-            // Reset semua
-            kpjNumber = ""
-            nikNumber = ""
-            fullName = ""
-            birthDate = ""
-            email = ""
-            kabupaten = ""
-            kecamatan = ""
-            kelurahan = ""
-            isDataFound = false
-            pageReady.value = false // Reset progress
+        for (rawList in state.rawList) {
+            regencyName = ""
+            subdistrictName = ""
+            wardName = ""
 
-            val currentNik = rawMap.nikNumber ?: continue
+            advanceWebViewControl.loadUrl(dptUrlInput)
 
-            // 1. Load halaman
-            webViewNavigator.loadUrl(dptUrlInput)
-            waitUntilPageReady(pageReady)
+            delay(5_000)
 
-            // 2. Inject NIK
-            val jsSetNik = "document.querySelector('form input[type=\"text\"]').value = '$currentNik';"
-            webViewNavigator.evaluateJavaScript(jsSetNik)
-
-            // 3. Bypass reCAPTCHA + trigger
-            val jsBypass = """
-                window.grecaptcha = { execute: () => Promise.resolve('token') };
-                if (typeof findDptb === 'function') findDptb('$currentNik');
+            val inputNikElement = """
+                (function() {
+                    const input = document.querySelector('form input[type="text"]');
+                    if (input) {
+                        input.value = '${rawList.nikNumber}';
+                        input.dispatchEvent(new Event('input', {bubbles: true}));
+                        return 'OK';
+                    }
+                    return 'NO_INPUT';
+                })();
             """.trimIndent()
-            webViewNavigator.evaluateJavaScript(jsBypass)
+            advanceWebViewControl.evaluateJavascript(inputNikElement) {}
 
-            // 4. Klik Pencarian
-            val jsClick = """
+            delay(1_000)
+
+            val bypassCaptcha = """
+                window.grecaptcha = { execute: () => Promise.resolve('token') };
+                if (typeof findDptb === 'function') findDptb('${rawList.nikNumber}');
+            """.trimIndent()
+            advanceWebViewControl.evaluateJavascript(bypassCaptcha) {}
+
+            delay(1_000)
+
+            val elementFind = """
                 Array.from(document.querySelectorAll('div.wizard-buttons button'))
                 .find(b => b.textContent.trim().includes('Pencarian'))?.click();
             """.trimIndent()
-            webViewNavigator.evaluateJavaScript(jsClick)
+            advanceWebViewControl.evaluateJavascript(elementFind) {}
 
-            // Tunggu hasil
-            delay(10_000)
+            delay(5_000)
 
-            // 5. Cek apakah ditemukan
             val jsCheck = "document.querySelector('.watermarked') ? 'YES' : 'NO';"
-            webViewNavigator.evaluateJavaScript(jsCheck) { result ->
+            advanceWebViewControl.evaluateJavascript(jsCheck) { result ->
                 isDataFound = result.contains("YES")
             }
 
+            delay(5_000)
+
             if (!isDataFound) {
-                Log.d("DPT", "NIK $currentNik TIDAK ditemukan")
+                onAction(DptAction.Process)
                 onAction(DptAction.Failure)
                 continue
             }
 
-            Log.d("DPT", "NIK $currentNik DITEMUKAN!")
-
-            // 6. Ambil data dari input
-            kpjNumber = rawMap.kpjNumber
-            nikNumber = currentNik
-            fullName = rawMap.fullName
-            birthDate = rawMap.birthDate
-            email = rawMap.email
-
-            // 7. Ambil alamat
-            val jsAddr = """
-                (function() {
-                    try {
-                        return JSON.stringify({
-                            kab: document.querySelector('.row--left')?.textContent?.trim() || '',
-                            kec: document.querySelector('.row--center')?.textContent?.trim() || '',
-                            kel: document.querySelectorAll('.row--right')[2]?.textContent?.trim() || ''
-                        });
-                    } catch(e) { return '{}'; }
-                })();
-            """.trimIndent()
-
-            webViewNavigator.evaluateJavaScript(jsAddr) { jsonStr ->
-                scope.launch {
-                    try {
-                        var cleaned = jsonStr.trim()
-                        if (cleaned.startsWith("\"") && cleaned.endsWith("\"")) {
-                            cleaned = cleaned.substring(1, cleaned.length - 1).replace("\\\"", "\"")
-                        }
-                        val json = JSONObject(cleaned)
-                        kabupaten = json.optString("kab").replace("Kabupaten", "").trim()
-                        kecamatan = json.optString("kec").replace("Kecamatan", "").trim()
-                        kelurahan = json.optString("kel").replace("Kelurahan", "").trim()
-                    } catch (e: Exception) {
-                        Log.e("DPT", "Parse alamat gagal: ${e.message}")
-                    }
-                }
+            val regencyElement = "document.querySelector('.row--left')?.textContent?.trim()"
+            advanceWebViewControl.evaluateJavascript(regencyElement) {
+                val removedQuote = removeDoubleQuote(it)
+                val result = getRegencyName(removedQuote)
+                regencyName = result
             }
 
-            delay(1200)
+            val subdistrictElement = "document.querySelector('.row--center')?.textContent?.trim()"
+            advanceWebViewControl.evaluateJavascript(subdistrictElement) {
+                val removedQuote = removeDoubleQuote(it)
+                val result = getSubdistrictName(removedQuote)
+                subdistrictName = result
+            }
 
-            // 8. Simpan hasil
+            val wardElement = "document.querySelectorAll('.row--right')[2]?.textContent?.trim()"
+            advanceWebViewControl.evaluateJavascript(wardElement) {
+                val removedQuote = removeDoubleQuote(it)
+                val result = getWardName(removedQuote)
+                wardName = result
+            }
+
+            delay(5_000)
+
             val result = DptResult(
-                kpjNumber = kpjNumber,
-                nikNumber = nikNumber,
-                fullName = fullName,
-                birthDate = birthDate,
-                email = email,
-                regencyName = kabupaten,
-                subdistrictName = kecamatan,
-                wardName = kelurahan
+                kpjNumber = rawList.kpjNumber,
+                nikNumber = rawList.nikNumber,
+                fullName = rawList.fullName,
+                birthDate = rawList.birthDate,
+                email = rawList.email,
+                regencyName = regencyName,
+                subdistrictName = subdistrictName,
+                wardName = wardName
             )
 
             onAction(DptAction.AddResult(result))
+            onAction(DptAction.Process)
             onAction(DptAction.Success)
 
-            delay(800)
+            delay(1000)
         }
-
-        // Selesai
         onAction(DptAction.IsStarted)
     }
 }

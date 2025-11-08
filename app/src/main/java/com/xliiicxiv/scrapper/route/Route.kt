@@ -12,6 +12,9 @@ sealed class Route {
     data object HomePage : Route()
 
     @Serializable
+    data object AdminPage : Route()
+
+    @Serializable
     data object SiipBpjsPage : Route()
 
     @Serializable

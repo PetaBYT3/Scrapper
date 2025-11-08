@@ -8,7 +8,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +29,6 @@ import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timelapse
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -39,33 +37,36 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
 import com.multiplatform.webview.web.WebViewNavigator
+import com.multiplatform.webview.web.WebViewState
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewState
 import com.valentinilk.shimmer.shimmer
 import com.xliiicxiv.scrapper.action.LasikAction
-import com.xliiicxiv.scrapper.action.SiipBpjsAction
-import com.xliiicxiv.scrapper.extension.exportToExcelSiip
-import com.xliiicxiv.scrapper.extension.getCurrentTime
+import com.xliiicxiv.scrapper.extension.waitWebViewToLoad
 import com.xliiicxiv.scrapper.state.LasikState
-import com.xliiicxiv.scrapper.string.SiipBPJSLoginUrl
-import com.xliiicxiv.scrapper.string.lasikLoginUrl
-import com.xliiicxiv.scrapper.string.siipPath
+import com.xliiicxiv.scrapper.string.lasikInputUrl
 import com.xliiicxiv.scrapper.string.xlsxMimeType
 import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
@@ -73,6 +74,7 @@ import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
 import com.xliiicxiv.scrapper.viewmodel.LasikViewModel
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -80,6 +82,9 @@ fun LasikPage(
     navController: NavController,
     viewModel: LasikViewModel = koinViewModel()
 ) {
+    val view = LocalView.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
     val state by viewModel.state.collectAsStateWithLifecycle()
     val onAction = viewModel::onAction
 
@@ -88,6 +93,14 @@ fun LasikPage(
         state = state,
         onAction = onAction
     )
+
+    DisposableEffect(state.isStarted) {
+        view.keepScreenOn = state.isStarted
+
+        onDispose {
+            view.keepScreenOn = false
+        }
+    }
 }
 
 @Composable
@@ -149,7 +162,7 @@ private fun TopBar(
             Row() {
                 CustomIconButton(
                     imageVector = Icons.Filled.RestartAlt,
-                    onClick = { webViewNavigator.loadUrl(lasikLoginUrl) }
+                    onClick = { webViewNavigator.loadUrl(lasikInputUrl) }
                 )
                 CustomIconButton(
                     imageVector = Icons.Filled.QuestionMark,
@@ -189,7 +202,7 @@ private fun Content(
             .fillMaxSize()
             .padding(horizontal = 10.dp),
     ) {
-        val webState = rememberWebViewState(url = lasikLoginUrl)
+        val webState = rememberWebViewState(url = lasikInputUrl)
         Card(
             modifier = Modifier
                 .weight(1f),
@@ -214,12 +227,12 @@ private fun Content(
                     }
                     else -> {}
                 }
-//                AutoCheck(
-//                    webViewNavigator = webViewNavigator,
-//                    webViewState = webState,
-//                    state = state,
-//                    onAction = onAction
-//                )
+                AutoCheck(
+                    webViewNavigator = webViewNavigator,
+                    webViewState = webState,
+                    state = state,
+                    onAction = onAction
+                )
 //                LaunchedEffect(state.isStarted) {
 //                    if (!state.isStarted && state.siipResult.isNotEmpty()) {
 //                        exportToExcelSiip(
@@ -357,13 +370,7 @@ private fun Content(
                             Button(
                                 modifier = Modifier
                                     .fillMaxWidth(),
-                                onClick = {
-                                    if (state.isStarted) {
-                                        onAction(LasikAction.StopBottomSheet)
-                                    } else {
-                                        onAction(LasikAction.IsStarted)
-                                    }
-                                },
+                                onClick = { onAction(LasikAction.IsStarted) },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (state.isStarted) {
                                         MaterialTheme.colorScheme.error
@@ -391,4 +398,72 @@ private fun Content(
         }
     }
     VerticalSpacer(10)
+}
+
+@Composable
+private fun AutoCheck(
+    webViewNavigator: WebViewNavigator,
+    webViewState: WebViewState,
+    state: LasikState,
+    onAction: (LasikAction) -> Unit
+) {
+    var isDataValid by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.isStarted) {
+        if (!state.isStarted) return@LaunchedEffect
+
+        delay(12_500)
+
+        for (rawString in state.rawList) {
+
+            waitWebViewToLoad(webViewState)
+
+            val nikElement = """
+            (function() {
+                var nikInput = document.querySelector('input[placeholder="Isi Nomor E-KTP"]');
+                if (nikInput) {
+                    nikInput.value = '${rawString.nikNumber}';
+                    nikInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    nikInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    return true;
+                }
+                return false;
+            })();
+            """.trimIndent()
+            webViewNavigator.evaluateJavaScript(nikElement)
+
+            val kpjElement = """
+            (function() {
+                var kpjInput = document.querySelector('input[placeholder="Isi Nomor KPJ"]');
+                if (kpjInput) {
+                    kpjInput.value = '${rawString.kpjNumber}';
+                    kpjInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    kpjInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    return true;
+                }
+                return false;
+            })();
+            """.trimIndent()
+            webViewNavigator.evaluateJavaScript(kpjElement)
+
+            val nameElement = """
+            (function() {
+                var namaInput = document.querySelector('input[placeholder="Isi Nama sesuai KTP"]');
+                if (namaInput) {
+                    namaInput.value = '${rawString.fullName}';
+                    namaInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    namaInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    return true;
+                }
+                return false;
+            })();
+            """.trimIndent()
+            webViewNavigator.evaluateJavaScript(nameElement)
+
+            delay(1_000)
+            onAction(LasikAction.Process)
+            webViewNavigator.loadUrl(lasikInputUrl)
+        }
+        onAction(LasikAction.IsStarted)
+    }
 }

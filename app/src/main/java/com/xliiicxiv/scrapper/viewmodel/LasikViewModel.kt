@@ -5,7 +5,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.LasikAction
-import com.xliiicxiv.scrapper.extension.getKpjFromXlsx
+import com.xliiicxiv.scrapper.extension.getDataForLasik
 import com.xliiicxiv.scrapper.state.LasikState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +34,7 @@ class LasikViewModel(
                 _state.update { it.copy(sheetUri = action.uri) }
                 viewModelScope.launch {
                     if (action.uri != null) {
-                        getKpjFromXlsx(context, action.uri).collect { rawString ->
+                        getDataForLasik(context, action.uri).collect { rawString ->
                             _state.update { it.copy(rawList = it.rawList + rawString) }
                         }
                     }

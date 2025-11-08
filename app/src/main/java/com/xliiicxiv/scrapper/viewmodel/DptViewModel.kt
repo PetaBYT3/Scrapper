@@ -5,8 +5,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.DptAction
-import com.xliiicxiv.scrapper.extension.getKpjFromXlsx
-import com.xliiicxiv.scrapper.extension.getNikFromXlsx
+import com.xliiicxiv.scrapper.extension.getDataForDpt
 import com.xliiicxiv.scrapper.state.DptState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +34,7 @@ class DptViewModel(
                 _state.update { it.copy(sheetUri = action.uri) }
                 viewModelScope.launch {
                     if (action.uri != null) {
-                        getNikFromXlsx(context, action.uri).collect { rawList ->
+                        getDataForDpt(context, action.uri).collect { rawList ->
                             _state.update { it.copy(rawList = it.rawList + rawList) }
                         }
                     }
@@ -61,6 +60,14 @@ class DptViewModel(
             }
             DptAction.IsStarted -> {
                 _state.update { it.copy(isStarted = !it.isStarted) }
+                if (_state.value.isStarted) {
+                    _state.update { it.copy(
+                        process = 0,
+                        success = 0,
+                        failure = 0,
+                        dptResult = emptyList(),
+                    ) }
+                }
             }
             DptAction.StopBottomSheet -> {
                 _state.update { it.copy(stopBottomSheet = !it.stopBottomSheet) }

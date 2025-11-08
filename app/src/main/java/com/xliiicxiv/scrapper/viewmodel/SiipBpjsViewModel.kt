@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.SiipBpjsAction
 import com.xliiicxiv.scrapper.effect.SiipBpjsEffect
 import com.xliiicxiv.scrapper.effect.SiipBpjsEffect.*
-import com.xliiicxiv.scrapper.extension.getKpjFromXlsx
+import com.xliiicxiv.scrapper.extension.getDataForSiip
 import com.xliiicxiv.scrapper.state.SiipBpjsState
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +44,7 @@ class SiipBpjsViewModel(
                 _state.update { it.copy(sheetUri = action.uri) }
                 viewModelScope.launch {
                     if (action.uri != null) {
-                        getKpjFromXlsx(context, action.uri).collect { rawString ->
+                        getDataForSiip(context, action.uri).collect { rawString ->
                             _state.update { it.copy(rawList = it.rawList + rawString) }
                         }
                     }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.rounded.Start
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.xliiicxiv.scrapper.route.Route
+import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextHint
 import com.xliiicxiv.scrapper.template.CustomTextTitle
@@ -45,7 +47,11 @@ private fun Scaffold(
     navController: NavController
 ) {
     Scaffold(
-        topBar = { TopBar() },
+        topBar = {
+            TopBar(
+                navController = navController
+            )
+        },
         content = { innerPadding ->
             Column(
                 modifier = Modifier
@@ -62,10 +68,18 @@ private fun Scaffold(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar() {
+private fun TopBar(
+    navController: NavController
+) {
     TopAppBar(
         navigationIcon = {},
-        title = { Text(text = "Home") }
+        title = { Text(text = "Home") },
+        actions = {
+            CustomIconButton(
+                imageVector = Icons.Filled.AdminPanelSettings,
+                onClick = { navController.navigate(Route.AdminPage) }
+            )
+        }
     )
 }
 

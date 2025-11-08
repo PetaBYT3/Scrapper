@@ -150,7 +150,7 @@ private fun Content(
 }
 
 @Composable
-fun FloatingActionButton() {
+private fun FloatingActionButton() {
     ExtendedFloatingActionButton(
         onClick = {},
         icon = {

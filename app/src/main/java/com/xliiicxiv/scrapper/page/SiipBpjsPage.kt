@@ -144,10 +144,12 @@ fun SiipBpjsPage(
         CustomBottomSheetMessageComposable(
             title = "How To Use ?",
             content = {
-                CustomTextTitle(text = "How to start the Auto Check ?")
+                CustomTextTitle(text = "How to start the SIIP BPJS auto check ?")
+                VerticalSpacer(5)
                 CustomTextContent(text = "1. Login Into SIIP BPJS Web\n2. Select .xlsx File\n3. Click Start Button")
-                VerticalSpacer(10)
+                VerticalSpacer(15)
                 CustomTextTitle(text = "Where the result saved ?")
+                VerticalSpacer(5)
                 CustomTextContent(text = "Documents / Scrapper / Siip BPJS")
             },
             onDismiss = { onAction(SiipBpjsAction.QuestionBottomSheet) }

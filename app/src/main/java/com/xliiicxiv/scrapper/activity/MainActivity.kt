@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.xliiicxiv.scrapper.page.AdminPage
 import com.xliiicxiv.scrapper.page.DptPage
 import com.xliiicxiv.scrapper.page.ExamplePage
 import com.xliiicxiv.scrapper.page.HomePage
@@ -42,6 +43,11 @@ class MainActivity : ComponentActivity() {
                     }
                     slideComposable<Route.HomePage> {
                         HomePage(
+                            navController = navController
+                        )
+                    }
+                    slideComposable<Route.AdminPage> {
+                        AdminPage(
                             navController = navController
                         )
                     }

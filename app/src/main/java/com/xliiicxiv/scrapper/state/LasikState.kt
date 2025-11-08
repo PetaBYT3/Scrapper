@@ -1,6 +1,7 @@
 package com.xliiicxiv.scrapper.state
 
 import android.net.Uri
+import com.xliiicxiv.scrapper.dataclass.LasikResult
 
 data class LasikState(
 
@@ -11,7 +12,7 @@ data class LasikState(
     val sheetUri: Uri? = null,
     val sheetName: String? = null,
 
-    val rawList: List<String> = emptyList(),
+    val rawList: List<LasikResult> = emptyList(),
 
     val deleteXlsxBottomSheet: Boolean = false,
 
@@ -21,4 +22,6 @@ data class LasikState(
     val process: Int = 0,
     val success: Int = 0,
     val failure: Int = 0,
+
+    val lasikResult: List<LasikResult> = emptyList()
 )
