@@ -1,6 +1,9 @@
 package com.xliiicxiv.scrapper.action
 
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.xliiicxiv.scrapper.dataclass.LasikResult
 import com.xliiicxiv.scrapper.dataclass.SiipResult
 
 sealed interface LasikAction {
@@ -15,22 +18,16 @@ sealed interface LasikAction {
 
     data object DeleteXlsx : LasikAction
 
-    data object DeleteXlsxBottomSheet : LasikAction
-
-    data class RawList(val rawList: List<String>) : LasikAction
-
-    data object IsStarted : LasikAction
-
-    data object StopBottomSheet : LasikAction
-
     data object Success : LasikAction
 
     data object Failure : LasikAction
 
     data object Process : LasikAction
 
-    data class AddResult(val result: SiipResult) : LasikAction
+    data class AddResult(val result: LasikResult) : LasikAction
 
-    data class ShowSnackbar(val message: String) : LasikAction
+    data object IsStarted : LasikAction
+
+    data class MessageDialog(val color: Color ,val icon: ImageVector, val message: String) : LasikAction
 
 }

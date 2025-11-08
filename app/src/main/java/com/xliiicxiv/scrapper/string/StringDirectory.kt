@@ -1,8 +1,8 @@
 package com.xliiicxiv.scrapper.string
 
-const val siipPath = "Documents/Scrapper/Siip BPJS"
-const val lasikPath = "Documents/Scrapper/Lasik"
-const val dptPath = "Documents/Scrapper/DPT"
+const val siipPath = "Documents/Auto Check/Siip BPJS"
+const val lasikPath = "Documents/Auto Check/Lasik"
+const val dptPath = "Documents/Auto Check/DPT"
 
 const val xlsxMimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 

@@ -4,11 +4,13 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.xliiicxiv.scrapper.action.LasikAction
 import com.xliiicxiv.scrapper.action.SiipBpjsAction
 import com.xliiicxiv.scrapper.effect.SiipBpjsEffect
 import com.xliiicxiv.scrapper.effect.SiipBpjsEffect.*
 import com.xliiicxiv.scrapper.extension.getDataForSiip
 import com.xliiicxiv.scrapper.state.SiipBpjsState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -25,9 +27,6 @@ class SiipBpjsViewModel(
 
     private val _state = MutableStateFlow(SiipBpjsState())
     val state = _state.asStateFlow()
-
-    private val _effect = MutableSharedFlow<SiipBpjsEffect>()
-    val effect = _effect.asSharedFlow()
 
     fun onAction(action: SiipBpjsAction) {
         when (action) {
@@ -63,8 +62,17 @@ class SiipBpjsViewModel(
                     rawList = emptyList(),
                 ) }
             }
-            is SiipBpjsAction.RawList -> {
-                _state.update { it.copy(rawList = action.rawList) }
+            SiipBpjsAction.Success -> {
+                _state.update { it.copy(success = it.success + 1) }
+            }
+            SiipBpjsAction.Failure -> {
+                _state.update { it.copy(failure = it.failure + 1) }
+            }
+            is SiipBpjsAction.AddResult -> {
+                _state.update { it.copy(siipResult = it.siipResult + action.result) }
+            }
+            SiipBpjsAction.Process -> {
+                _state.update { it.copy(process = it.process + 1) }
             }
             SiipBpjsAction.IsStarted -> {
                 _state.update { it.copy(isStarted = !it.isStarted) }
@@ -79,27 +87,18 @@ class SiipBpjsViewModel(
                     }
                 }
             }
-            SiipBpjsAction.DeleteXlsxBottomSheet -> {
-                _state.update { it.copy(deleteXlsxBottomSheet = !it.deleteXlsxBottomSheet) }
-            }
-            SiipBpjsAction.StopBottomSheet -> {
-                _state.update { it.copy(stopBottomSheet = !it.stopBottomSheet) }
-            }
-            SiipBpjsAction.Success -> {
-                _state.update { it.copy(success = it.success + 1) }
-            }
-            SiipBpjsAction.Failure -> {
-                _state.update { it.copy(failure = it.failure + 1) }
-            }
-            is SiipBpjsAction.AddResult -> {
-                _state.update { it.copy(siipResult = it.siipResult + action.result) }
-            }
-            SiipBpjsAction.Process -> {
-                _state.update { it.copy(process = it.process + 1) }
-            }
-            is SiipBpjsAction.ShowSnackbar -> {
+            is SiipBpjsAction.MessageDialog -> {
                 viewModelScope.launch {
-                    _effect.emit(ShowSnackbar(action.message))
+                    _state.update { it.copy(
+                        dialogVisibility = true,
+                        dialogColor = action.color,
+                        iconDialog = action.icon,
+                        messageDialog = action.message
+                    ) }
+                    delay(5_000)
+                    _state.update { it.copy(
+                        dialogVisibility = false,
+                    ) }
                 }
             }
         }

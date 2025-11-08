@@ -1,6 +1,8 @@
 package com.xliiicxiv.scrapper.action
 
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.xliiicxiv.scrapper.dataclass.DptResult
 import com.xliiicxiv.scrapper.dataclass.SiipResult
 
@@ -16,14 +18,6 @@ sealed interface DptAction {
 
     data object DeleteXlsx : DptAction
 
-    data object DeleteXlsxBottomSheet : DptAction
-
-    data class RawList(val rawList: List<String>) : DptAction
-
-    data object IsStarted : DptAction
-
-    data object StopBottomSheet : DptAction
-
     data object Success : DptAction
 
     data object Failure : DptAction
@@ -32,6 +26,8 @@ sealed interface DptAction {
 
     data class AddResult(val result: DptResult) : DptAction
 
-    data class ShowSnackbar(val message: String) : DptAction
+    data object IsStarted : DptAction
+
+    data class MessageDialog(val color: Color ,val icon: ImageVector, val message: String) : DptAction
 
 }

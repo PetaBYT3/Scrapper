@@ -1,6 +1,8 @@
 package com.xliiicxiv.scrapper.action
 
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.xliiicxiv.scrapper.dataclass.SiipResult
 
 sealed interface SiipBpjsAction {
@@ -17,14 +19,6 @@ sealed interface SiipBpjsAction {
 
     data object DeleteXlsx : SiipBpjsAction
 
-    data object DeleteXlsxBottomSheet : SiipBpjsAction
-
-    data class RawList(val rawList: List<String>) : SiipBpjsAction
-
-    data object IsStarted : SiipBpjsAction
-
-    data object StopBottomSheet : SiipBpjsAction
-
     data object Success : SiipBpjsAction
 
     data object Failure : SiipBpjsAction
@@ -33,6 +27,8 @@ sealed interface SiipBpjsAction {
 
     data class AddResult(val result: SiipResult) : SiipBpjsAction
 
-    data class ShowSnackbar(val message: String) : SiipBpjsAction
+    data object IsStarted : SiipBpjsAction
+
+    data class MessageDialog(val color: Color ,val icon: ImageVector, val message: String) : SiipBpjsAction
 
 }

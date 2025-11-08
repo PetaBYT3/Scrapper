@@ -172,7 +172,7 @@ fun getDataForLasik(
                             regencyName = regencyName,
                             subdistrictName = subdistrictName,
                             wardName = wardName,
-                            isDataValid = ""
+                            lasikResult = ""
                         )
                     )
                 }
@@ -312,6 +312,88 @@ fun exportToExcelDpt(
         updateMaxWidth(5, result.regencyName)
         updateMaxWidth(6, result.subdistrictName)
         updateMaxWidth(7, result.wardName)
+    }
+
+    try {
+        val outputStream = saveFile(
+            context = context,
+            path = path,
+            fileName = fileName
+        )
+
+        outputStream?.use { stream ->
+            workbook.write(stream)
+        }
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+
+    workbook.close()
+}
+
+fun exportToExcelLasik(
+    context: Context,
+    path: String,
+    fileName: String,
+    lasikResult: List<LasikResult>
+) {
+    val workbook = XSSFWorkbook()
+    val sheet = workbook.createSheet("DPT Result")
+
+    val maxColumnWidths = mutableMapOf(
+        0 to "KPJ Number".length,
+        1 to "NIK Number".length,
+        2 to "Full Name".length,
+        3 to "Birth Date".length,
+        4 to "E-Mail".length,
+        5 to "Kabupaten Name".length,
+        6 to "Kecamatan Name".length,
+        7 to "Kelurahan Name".length,
+        8 to "Lasik Result".length
+    )
+
+    fun updateMaxWidth(columnIndex: Int, text: String) {
+        val currentMax = maxColumnWidths[columnIndex] ?: 0
+        val newWidth = text.length
+        if (newWidth > currentMax) {
+            maxColumnWidths[columnIndex] = newWidth
+        }
+    }
+
+    val headerRow = sheet.createRow(0)
+    headerRow.createCell(0).setCellValue("KPJ Number")
+    headerRow.createCell(1).setCellValue("NIK Number")
+    headerRow.createCell(2).setCellValue("Full Name")
+    headerRow.createCell(3).setCellValue("Birth Date")
+    headerRow.createCell(4).setCellValue("E-Mail")
+    headerRow.createCell(5).setCellValue("Kabupaten Name")
+    headerRow.createCell(6).setCellValue("Kecamatan Name")
+    headerRow.createCell(7).setCellValue("Kelurahan Name")
+    headerRow.createCell(8).setCellValue("Lasik Result")
+
+    lasikResult.forEachIndexed { index, result ->
+        val dataRow = sheet.createRow(index + 1)
+
+        dataRow.createCell(0).setCellValue(result.kpjNumber)
+        dataRow.createCell(1).setCellValue(result.nikNumber)
+        dataRow.createCell(2).setCellValue(result.fullName)
+        dataRow.createCell(3).setCellValue(result.birthDate)
+        dataRow.createCell(4).setCellValue(result.email)
+        dataRow.createCell(5).setCellValue(result.regencyName)
+        dataRow.createCell(6).setCellValue(result.subdistrictName)
+        dataRow.createCell(7).setCellValue(result.wardName)
+        dataRow.createCell(8).setCellValue(result.lasikResult)
+
+        updateMaxWidth(0, result.kpjNumber)
+        updateMaxWidth(1, result.nikNumber)
+        updateMaxWidth(2, result.fullName)
+        updateMaxWidth(3, result.birthDate)
+        updateMaxWidth(4, result.email)
+        updateMaxWidth(5, result.regencyName)
+        updateMaxWidth(6, result.subdistrictName)
+        updateMaxWidth(7, result.wardName)
+        updateMaxWidth(8, result.lasikResult)
     }
 
     try {

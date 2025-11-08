@@ -1,5 +1,7 @@
 package com.xliiicxiv.scrapper.action
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.xliiicxiv.scrapper.dataclass.UserDataClass
 
 sealed interface AdminAction {
@@ -17,5 +19,7 @@ sealed interface AdminAction {
     data class UserPassword(val password: String) : AdminAction
 
     data class UserRole(val role: String) : AdminAction
+
+    data class MessageDialog(val color: Color ,val icon: ImageVector, val message: String) : AdminAction
 
 }

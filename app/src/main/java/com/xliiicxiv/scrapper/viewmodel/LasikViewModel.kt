@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.LasikAction
 import com.xliiicxiv.scrapper.extension.getDataForLasik
 import com.xliiicxiv.scrapper.state.LasikState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -53,17 +54,6 @@ class LasikViewModel(
                     rawList = emptyList(),
                 ) }
             }
-            LasikAction.DeleteXlsxBottomSheet -> {
-                _state.update { it.copy(deleteXlsxBottomSheet = !it.deleteXlsxBottomSheet) }
-            }
-            is LasikAction.RawList -> {
-            }
-            LasikAction.IsStarted -> {
-                _state.update { it.copy(isStarted = !it.isStarted) }
-            }
-            LasikAction.StopBottomSheet -> {
-                _state.update { it.copy(stopBottomSheet = !it.stopBottomSheet) }
-            }
             LasikAction.Process -> {
                 _state.update { it.copy(process = it.process + 1) }
             }
@@ -74,10 +64,34 @@ class LasikViewModel(
                 _state.update { it.copy(failure = it.failure + 1) }
             }
             is LasikAction.AddResult -> {
-
+                _state.update { it.copy(lasikResult = it.lasikResult + action.result) }
             }
-            is LasikAction.ShowSnackbar -> {
+            LasikAction.IsStarted -> {
+                _state.update { it.copy(isStarted = !it.isStarted) }
 
+                val isStarted = _state.value.isStarted
+                if (isStarted) {
+                    _state.update { it.copy(
+                        process = 0,
+                        success = 0,
+                        failure = 0,
+                        lasikResult = emptyList()
+                    ) }
+                }
+            }
+            is LasikAction.MessageDialog -> {
+                viewModelScope.launch {
+                    _state.update { it.copy(
+                        dialogVisibility = true,
+                        dialogColor = action.color,
+                        iconDialog = action.icon,
+                        messageDialog = action.message
+                    ) }
+                    delay(5_000)
+                    _state.update { it.copy(
+                        dialogVisibility = false,
+                    ) }
+                }
             }
         }
     }

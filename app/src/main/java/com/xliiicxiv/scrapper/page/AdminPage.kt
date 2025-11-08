@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -48,6 +49,7 @@ import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextField
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
+import com.xliiicxiv.scrapper.ui.theme.Warning
 import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmationComposable
 import com.xliiicxiv.scrapper.util.CustomBottomSheetInputComposable
 import com.xliiicxiv.scrapper.viewmodel.AdminViewModel
@@ -105,7 +107,7 @@ fun AdminPage(
                 AnimatedVisibility(
                     enter = fadeIn(),
                     exit = fadeOut(),
-                    visible = state.warningAdd,
+                    visible = state.dialogVisibility,
                     content = {
                         Column() {
                             VerticalSpacer(10)
@@ -113,19 +115,19 @@ fun AdminPage(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(5.dp))
-                                    .background(MaterialTheme.colorScheme.errorContainer),
+                                    .background(state.dialogColor),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     modifier = Modifier
                                         .padding(10.dp),
-                                    imageVector = Icons.Filled.Warning,
+                                    imageVector = state.iconDialog,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                    tint = Color.Black
                                 )
                                 Text(
-                                    text = state.warningAddMessage,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    text = state.messageDialog,
+                                    color = Color.Black,
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -133,7 +135,17 @@ fun AdminPage(
                     }
                 )
             },
-            btnYes = { onAction(AdminAction.AddUser) },
+            btnYes = {
+                if (state.userName.isBlank() || state.userPassword.isBlank() || state.userRole.isBlank()) {
+                    onAction(AdminAction.MessageDialog(
+                        color = Warning,
+                        icon = Icons.Filled.Warning,
+                        message = "Please fill all fields & select the role !"
+                    ))
+                } else {
+                    onAction(AdminAction.AddUser)
+                }
+            },
             onCancel = { onAction(AdminAction.AddBottomSheet) },
         )
     }

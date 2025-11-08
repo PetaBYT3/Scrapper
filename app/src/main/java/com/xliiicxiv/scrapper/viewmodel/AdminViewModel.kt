@@ -1,6 +1,11 @@
 package com.xliiicxiv.scrapper.viewmodel
 
 import android.util.Log
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.AdminAction
@@ -10,6 +15,8 @@ import com.xliiicxiv.scrapper.state.AdminState
 import com.xliiicxiv.scrapper.string.isExist
 import com.xliiicxiv.scrapper.string.isFail
 import com.xliiicxiv.scrapper.string.isSuccess
+import com.xliiicxiv.scrapper.ui.theme.Success
+import com.xliiicxiv.scrapper.ui.theme.Warning
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,8 +40,26 @@ class AdminViewModel(
 
     fun onAction(action: AdminAction) {
         when (action) {
+            is AdminAction.UserName -> {
+                _state.update { it.copy(userName = action.name) }
+            }
+            is AdminAction.UserPassword -> {
+                _state.update { it.copy(userPassword = action.password) }
+            }
+            is AdminAction.UserRole -> {
+                _state.update { it.copy(userRole = action.role) }
+            }
             AdminAction.AddBottomSheet -> {
                 _state.update { it.copy(addBottomSheet = !it.addBottomSheet) }
+
+                val addBottomSheet = _state.value.addBottomSheet
+                if (!addBottomSheet) {
+                    _state.update { it.copy(
+                        userName = "",
+                        userPassword = "",
+                        userRole = ""
+                    ) }
+                }
             }
             AdminAction.AddUser -> {
                 viewModelScope.launch {
@@ -46,32 +71,32 @@ class AdminViewModel(
                     )
                     val firebaseResult = firebaseRepository.addUser(userData)
 
-                    if (_state.value.userName.isBlank()) {
-                        _state.update { it.copy(warningAddMessage = "Username cannot be empty", warningAdd = true) }
-                        delay(5_000)
-                        _state.update { it.copy(warningAddMessage = "", warningAdd = false) }
-                    } else if (_state.value.userPassword.isBlank()) {
-                        _state.update { it.copy(warningAddMessage = "Password cannot be empty", warningAdd = true) }
-                        delay(5_000)
-                        _state.update { it.copy(warningAddMessage = "", warningAdd = false) }
-                    } else if (_state.value.userRole.isBlank()) {
-                        _state.update { it.copy(warningAddMessage = "Please choose a role", warningAdd = true) }
-                        delay(5_000)
-                        _state.update { it.copy(warningAddMessage = "", warningAdd = false) }
-                    } else {
-                        val message = when (firebaseResult) {
-                            isFail -> "Failed to add user"
-                            isExist -> "Username already exist"
-                            else -> "Something went wrong"
+                    when (firebaseResult) {
+                        isSuccess -> {
+                            showDialog(
+                                dialogColor = Success,
+                                iconDialog = Icons.Filled.Check,
+                                messageDialog = "User successfully added !"
+                            )
+                            _state.update { it.copy(
+                                userName = "",
+                                userPassword = "",
+                                userRole = ""
+                            ) }
                         }
-                        _state.update { it.copy(warningAddMessage = message, warningAdd = true) }
-                        delay(5_000)
-                        _state.update { it.copy(warningAddMessage = "", warningAdd = false) }
-
-                        if (firebaseResult == isSuccess) {
-                            _state.update { it.copy(isAddSuccess = true) }
-                            delay(500)
-                            _state.update { it.copy(isAddSuccess = false) }
+                        isFail -> {
+                            showDialog(
+                                dialogColor = Warning,
+                                iconDialog = Icons.Filled.Warning,
+                                messageDialog = "Something went wrong !"
+                            )
+                        }
+                        isExist -> {
+                            showDialog(
+                                dialogColor = Warning,
+                                iconDialog = Icons.Filled.Warning,
+                                messageDialog = "Username already exist !"
+                            )
                         }
                     }
                 }
@@ -92,15 +117,37 @@ class AdminViewModel(
                     firebaseRepository.deleteUser(userToDelete)
                 }
             }
-            is AdminAction.UserName -> {
-                _state.update { it.copy(userName = action.name) }
+            is AdminAction.MessageDialog -> {
+                viewModelScope.launch {
+                    _state.update { it.copy(
+                        dialogVisibility = true,
+                        dialogColor = action.color,
+                        iconDialog = action.icon,
+                        messageDialog = action.message
+                    ) }
+                    delay(5_000)
+                    _state.update { it.copy(
+                        dialogVisibility = false,
+                    ) }
+                }
             }
-            is AdminAction.UserPassword -> {
-                _state.update { it.copy(userPassword = action.password) }
-            }
-            is AdminAction.UserRole -> {
-                _state.update { it.copy(userRole = action.role) }
-            }
+        }
+    }
+
+    private fun showDialog(
+        dialogColor: Color,
+        iconDialog: ImageVector,
+        messageDialog: String
+    ) {
+        viewModelScope.launch {
+            _state.update { it.copy(
+                dialogVisibility = true,
+                dialogColor = dialogColor,
+                iconDialog = iconDialog,
+                messageDialog = messageDialog
+            ) }
+            delay(5_000)
+            _state.update { it.copy(dialogVisibility = false) }
         }
     }
 }

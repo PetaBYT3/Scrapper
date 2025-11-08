@@ -3,12 +3,16 @@ package com.xliiicxiv.scrapper.page
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +20,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -30,6 +36,7 @@ import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,19 +57,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.valentinilk.shimmer.shimmer
 import com.xliiicxiv.scrapper.action.DptAction
+import com.xliiicxiv.scrapper.action.LasikAction
 import com.xliiicxiv.scrapper.dataclass.DptResult
 import com.xliiicxiv.scrapper.extension.AdvanceWebViewComposable
 import com.xliiicxiv.scrapper.extension.AdvanceWebViewControl
+import com.xliiicxiv.scrapper.extension.awaitJavaScript
 import com.xliiicxiv.scrapper.extension.exportToExcelDpt
 import com.xliiicxiv.scrapper.extension.getCurrentTime
 import com.xliiicxiv.scrapper.extension.getRegencyName
@@ -79,6 +90,8 @@ import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
+import com.xliiicxiv.scrapper.ui.theme.Success
+import com.xliiicxiv.scrapper.ui.theme.Warning
 import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmation
 import com.xliiicxiv.scrapper.util.CustomBottomSheetMessage
 import com.xliiicxiv.scrapper.util.CustomBottomSheetMessageComposable
@@ -92,7 +105,6 @@ fun DptPage(
     viewModel: DptViewModel = koinViewModel()
 ) {
     val view = LocalView.current
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val onAction = viewModel::onAction
@@ -103,6 +115,18 @@ fun DptPage(
         onAction = onAction
     )
 
+    BackHandler(enabled = true) {
+        if (state.isStarted) {
+            onAction(DptAction.MessageDialog(
+                color = Warning,
+                icon = Icons.Filled.Warning,
+                message = "Stop The Process First !"
+            ))
+        } else {
+            navController.popBackStack()
+        }
+    }
+
     DisposableEffect(state.isStarted) {
         view.keepScreenOn = state.isStarted
 
@@ -111,36 +135,19 @@ fun DptPage(
         }
     }
 
-    if (state.stopBottomSheet) {
-        CustomBottomSheetConfirmation(
-            title = "Stop Process",
-            message = "Are you sure you want to stop the process?, Some data may not be collected",
-            onConfirm = { onAction(DptAction.IsStarted) },
-            onCancel = { onAction(DptAction.StopBottomSheet) }
-        )
-    }
-
     if (state.questionBottomSheet) {
         CustomBottomSheetMessageComposable(
             title = "How To Use ?",
             content = {
                 CustomTextTitle(text = "How to start the DPT auto check ?")
                 VerticalSpacer(5)
-                CustomTextContent(text = "1. Wait until web page loaded\n2. Select .xlsx File\n3. Click Start Button")
-                VerticalSpacer(15)
+                CustomTextContent(text = "1. Wait until web page loaded\n2. Select .xlsx file\n3. Click start button")
+                VerticalSpacer(10)
                 CustomTextTitle(text = "Where the result saved ?")
                 VerticalSpacer(5)
                 CustomTextContent(text = "Documents / Scrapper / DPT")
             },
             onDismiss = { onAction(DptAction.QuestionBottomSheet) }
-        )
-    }
-
-    if (state.deleteXlsxBottomSheet) {
-        CustomBottomSheetMessage(
-            title = "Delete .XLSX File",
-            message = "Auto check is running, Stop it first to delete .xlsx file",
-            onDismiss = { onAction(DptAction.DeleteXlsxBottomSheet) }
         )
     }
 }
@@ -192,7 +199,11 @@ private fun TopBar(
                 imageVector = Icons.Filled.ArrowBack,
                 onClick = {
                     if (state.isStarted) {
-                        onAction(DptAction.ShowSnackbar("Please Stop Process First"))
+                        onAction(DptAction.MessageDialog(
+                            color = Warning,
+                            icon = Icons.Filled.Warning,
+                            message = "Stop The Process First !"
+                        ))
                     } else {
                         navController.popBackStack()
                     }
@@ -242,7 +253,7 @@ private fun Content(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 15.dp),
     ) {
         Card(
             modifier = Modifier
@@ -288,8 +299,11 @@ private fun Content(
                             fileName = "DPT Result ${getCurrentTime()}.xlsx",
                             dptResult = state.dptResult
                         )
-                        onAction(DptAction.StopBottomSheet)
-                        Toast.makeText(context, "Result Saved", Toast.LENGTH_SHORT).show()
+                        onAction(DptAction.MessageDialog(
+                            color = Success,
+                            icon = Icons.Filled.Check,
+                            message = "File Saved !"
+                        ))
                     }
                 }
             }
@@ -338,7 +352,11 @@ private fun Content(
                                     onClick = {
                                         if (state.sheetUri != null) {
                                             if (state.isStarted) {
-                                                onAction(DptAction.DeleteXlsxBottomSheet)
+                                                onAction(DptAction.MessageDialog(
+                                                    color = Warning,
+                                                    icon = Icons.Filled.Warning,
+                                                    message = "Stop The Process First !"
+                                                ))
                                             } else {
                                                 onAction(DptAction.DeleteXlsx)
                                             }
@@ -411,6 +429,39 @@ private fun Content(
                                                 CustomTextContent(text = "${state.failure} Failed")
                                             }
                                         }
+                                        AnimatedVisibility(
+                                            enter = fadeIn(),
+                                            exit = fadeOut(),
+                                            visible = state.dialogVisibility,
+                                            content = {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(25))
+                                                        .background(state.dialogColor)
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .padding(10.dp)
+                                                            .width(100.dp),
+                                                        verticalArrangement = Arrangement.Center,
+                                                        horizontalAlignment = Alignment.CenterHorizontally
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = state.iconDialog,
+                                                            contentDescription = null,
+                                                            tint = Color.Black
+                                                        )
+                                                        VerticalSpacer(10)
+                                                        Text(
+                                                            text = state.messageDialog,
+                                                            textAlign = TextAlign.Center,
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = Color.Black
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        )
                                     }
                                 }
                             )
@@ -418,13 +469,7 @@ private fun Content(
                             Button(
                                 modifier = Modifier
                                     .fillMaxWidth(),
-                                onClick = {
-                                    if (state.isStarted) {
-                                        onAction(DptAction.StopBottomSheet)
-                                    } else {
-                                        onAction(DptAction.IsStarted)
-                                    }
-                                },
+                                onClick = { onAction(DptAction.IsStarted) },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (state.isStarted) {
                                         MaterialTheme.colorScheme.error
@@ -476,7 +521,7 @@ private fun AutoCheck(
 
             advanceWebViewControl.loadUrl(dptUrlInput)
 
-            delay(5_000)
+            delay(2_500)
 
             val inputNikElement = """
                 (function() {
@@ -489,7 +534,7 @@ private fun AutoCheck(
                     return 'NO_INPUT';
                 })();
             """.trimIndent()
-            advanceWebViewControl.evaluateJavascript(inputNikElement) {}
+            advanceWebViewControl.awaitJavaScript(inputNikElement)
 
             delay(1_000)
 
@@ -497,7 +542,7 @@ private fun AutoCheck(
                 window.grecaptcha = { execute: () => Promise.resolve('token') };
                 if (typeof findDptb === 'function') findDptb('${rawList.nikNumber}');
             """.trimIndent()
-            advanceWebViewControl.evaluateJavascript(bypassCaptcha) {}
+            advanceWebViewControl.awaitJavaScript(bypassCaptcha)
 
             delay(1_000)
 
@@ -505,7 +550,7 @@ private fun AutoCheck(
                 Array.from(document.querySelectorAll('div.wizard-buttons button'))
                 .find(b => b.textContent.trim().includes('Pencarian'))?.click();
             """.trimIndent()
-            advanceWebViewControl.evaluateJavascript(elementFind) {}
+            advanceWebViewControl.awaitJavaScript(elementFind)
 
             delay(5_000)
 
@@ -523,27 +568,25 @@ private fun AutoCheck(
             }
 
             val regencyElement = "document.querySelector('.row--left')?.textContent?.trim()"
-            advanceWebViewControl.evaluateJavascript(regencyElement) {
-                val removedQuote = removeDoubleQuote(it)
-                val result = getRegencyName(removedQuote)
-                regencyName = result
-            }
+            val regencyResult = advanceWebViewControl.awaitJavaScript(regencyElement)
+
+            val removedQuoteRegency = removeDoubleQuote(regencyResult)
+            val filteredRegency = getRegencyName(removedQuoteRegency)
+            regencyName = filteredRegency
 
             val subdistrictElement = "document.querySelector('.row--center')?.textContent?.trim()"
-            advanceWebViewControl.evaluateJavascript(subdistrictElement) {
-                val removedQuote = removeDoubleQuote(it)
-                val result = getSubdistrictName(removedQuote)
-                subdistrictName = result
-            }
+            val subdistrictResult = advanceWebViewControl.awaitJavaScript(subdistrictElement)
+
+            val removedQuoteSubdistrict = removeDoubleQuote(subdistrictResult)
+            val filteredSubdistrict = getSubdistrictName(removedQuoteSubdistrict)
+            subdistrictName = filteredSubdistrict
 
             val wardElement = "document.querySelectorAll('.row--right')[2]?.textContent?.trim()"
-            advanceWebViewControl.evaluateJavascript(wardElement) {
-                val removedQuote = removeDoubleQuote(it)
-                val result = getWardName(removedQuote)
-                wardName = result
-            }
+            val wardResult = advanceWebViewControl.awaitJavaScript(wardElement)
 
-            delay(5_000)
+            val removedQuoteWard = removeDoubleQuote(wardResult)
+            val filteredWard = getWardName(removedQuoteWard)
+            wardName = filteredWard
 
             val result = DptResult(
                 kpjNumber = rawList.kpjNumber,
@@ -559,8 +602,6 @@ private fun AutoCheck(
             onAction(DptAction.AddResult(result))
             onAction(DptAction.Process)
             onAction(DptAction.Success)
-
-            delay(1000)
         }
         onAction(DptAction.IsStarted)
     }

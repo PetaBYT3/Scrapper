@@ -1,7 +1,12 @@
 package com.xliiicxiv.scrapper.state
 
 import android.net.Uri
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.xliiicxiv.scrapper.dataclass.DptResult
+import com.xliiicxiv.scrapper.ui.theme.Warning
 
 data class DptState(
 
@@ -24,4 +29,9 @@ data class DptState(
     val failure: Int = 0,
 
     val dptResult: List<DptResult> = emptyList(),
+
+    val dialogVisibility: Boolean = false,
+    val dialogColor: Color = Warning,
+    val iconDialog: ImageVector = Icons.Filled.Warning,
+    val messageDialog: String = ""
 )

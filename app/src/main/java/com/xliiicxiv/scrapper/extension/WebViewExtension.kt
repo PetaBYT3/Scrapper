@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.util.Log
 import android.view.View
 import android.webkit.WebSettings
+import android.webkit.WebSettings.LOAD_CACHE_ELSE_NETWORK
+import android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
@@ -33,6 +35,10 @@ class AdvanceWebViewControl {
 
     fun loadUrl(url: String) {
         webView?.loadUrl(url)
+    }
+
+    fun navigateBack() {
+        webView?.goBack()
     }
 }
 
@@ -101,8 +107,9 @@ fun AdvanceWebViewComposable(
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.userAgentString = webUserAgent
-                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                settings.cacheMode = WebSettings.LOAD_NO_CACHE
+                settings.mixedContentMode = MIXED_CONTENT_ALWAYS_ALLOW
+                settings.cacheMode = LOAD_CACHE_ELSE_NETWORK
+                settings.databaseEnabled = true
                 settings.setSupportZoom(false)
                 setLayerType(View.LAYER_TYPE_HARDWARE, null)
 

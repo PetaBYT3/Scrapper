@@ -5,8 +5,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.DptAction
+import com.xliiicxiv.scrapper.action.LasikAction
 import com.xliiicxiv.scrapper.extension.getDataForDpt
 import com.xliiicxiv.scrapper.state.DptState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -53,25 +55,6 @@ class DptViewModel(
                     rawList = emptyList(),
                 ) }
             }
-            DptAction.DeleteXlsxBottomSheet -> {
-                _state.update { it.copy(deleteXlsxBottomSheet = !it.deleteXlsxBottomSheet) }
-            }
-            is DptAction.RawList -> {
-            }
-            DptAction.IsStarted -> {
-                _state.update { it.copy(isStarted = !it.isStarted) }
-                if (_state.value.isStarted) {
-                    _state.update { it.copy(
-                        process = 0,
-                        success = 0,
-                        failure = 0,
-                        dptResult = emptyList(),
-                    ) }
-                }
-            }
-            DptAction.StopBottomSheet -> {
-                _state.update { it.copy(stopBottomSheet = !it.stopBottomSheet) }
-            }
             DptAction.Process -> {
                 _state.update { it.copy(process = it.process + 1) }
             }
@@ -84,8 +67,30 @@ class DptViewModel(
             is DptAction.AddResult -> {
                 _state.update { it.copy(dptResult = it.dptResult + action.result) }
             }
-            is DptAction.ShowSnackbar -> {
-
+            DptAction.IsStarted -> {
+                _state.update { it.copy(isStarted = !it.isStarted) }
+                if (_state.value.isStarted) {
+                    _state.update { it.copy(
+                        process = 0,
+                        success = 0,
+                        failure = 0,
+                        dptResult = emptyList(),
+                    ) }
+                }
+            }
+            is DptAction.MessageDialog -> {
+                viewModelScope.launch {
+                    _state.update { it.copy(
+                        dialogVisibility = true,
+                        dialogColor = action.color,
+                        iconDialog = action.icon,
+                        messageDialog = action.message
+                    ) }
+                    delay(5_000)
+                    _state.update { it.copy(
+                        dialogVisibility = false,
+                    ) }
+                }
             }
         }
     }

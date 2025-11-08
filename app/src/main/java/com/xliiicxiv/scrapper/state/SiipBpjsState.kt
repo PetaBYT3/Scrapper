@@ -1,7 +1,12 @@
 package com.xliiicxiv.scrapper.state
 
 import android.net.Uri
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.xliiicxiv.scrapper.dataclass.SiipResult
+import com.xliiicxiv.scrapper.ui.theme.Warning
 
 data class SiipBpjsState(
 
@@ -25,6 +30,11 @@ data class SiipBpjsState(
     val success: Int = 0,
     val failure: Int = 0,
 
-    val siipResult: List<SiipResult> = emptyList()
+    val siipResult: List<SiipResult> = emptyList(),
+
+    val dialogVisibility: Boolean = false,
+    val dialogColor: Color = Warning,
+    val iconDialog: ImageVector = Icons.Filled.Warning,
+    val messageDialog: String = ""
 
 )

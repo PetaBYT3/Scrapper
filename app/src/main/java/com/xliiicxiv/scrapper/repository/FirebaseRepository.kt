@@ -1,12 +1,13 @@
 package com.xliiicxiv.scrapper.repository
 
-import androidx.compose.runtime.mutableStateOf
 import com.google.firebase.Firebase
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
 import com.xliiicxiv.scrapper.dataclass.UserDataClass
+import com.xliiicxiv.scrapper.string.LoginResult
+import com.xliiicxiv.scrapper.string.UserDataResult
 import com.xliiicxiv.scrapper.string.isExist
 import com.xliiicxiv.scrapper.string.isFail
 import com.xliiicxiv.scrapper.string.isSuccess
@@ -14,7 +15,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.tasks.await
+import kotlin.coroutines.resume
 
 class FirebaseRepository {
 
@@ -22,12 +23,45 @@ class FirebaseRepository {
 
     val userRef = firebaseDatabase.getReference("users")
 
+    suspend fun login(
+        userName: String,
+        userPassword: String
+    ) : LoginResult {
+        return suspendCancellableCoroutine { continuation ->
+            val userNameListener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (continuation.isActive) {
+                        if (snapshot.exists()) {
+                            val userSnapshot = snapshot.children.first()
+                            val userData = userSnapshot.getValue(UserDataClass::class.java)
+                            if (userData != null) {
+                                if (userData.userPassword == userPassword) {
+                                    continuation.resume(LoginResult.Success(userData.userId))
+                                } else {
+                                    continuation.resume((LoginResult.Fail))
+                                }
+                            } else {
+                                continuation.resume((LoginResult.Fail))
+                            }
+                        } else {
+                            continuation.resume((LoginResult.Fail))
+                        }
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    continuation.resume((LoginResult.Fail))
+                }
+            }
+            userRef.orderByChild("userName").equalTo(userName).addListenerForSingleValueEvent(userNameListener)
+        }
+    }
+
     suspend fun getUser() : Flow<List<UserDataClass>> {
         return callbackFlow {
             val listener = object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val userList = mutableListOf<UserDataClass>()
-
                     if (snapshot.exists()) {
                         for (snapshotChildren in snapshot.children) {
                             val userData = snapshotChildren.getValue(UserDataClass::class.java)
@@ -52,6 +86,55 @@ class FirebaseRepository {
         }
     }
 
+    suspend fun getUserById(userId: String) : Flow<UserDataClass?> {
+        return callbackFlow {
+            val query = userRef.orderByChild("userId").equalTo(userId)
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.exists()) {
+                        val userSnapshot = snapshot.children.first()
+                        val userData = userSnapshot.getValue(UserDataClass::class.java)
+                        if (userData != null) {
+                            trySend(userData)
+                        }
+                    } else {
+                        trySend(null)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    trySend(null)
+                }
+            }
+
+            query.addValueEventListener(listener)
+
+            awaitClose {
+                query.removeEventListener(listener)
+            }
+        }
+    }
+
+    suspend fun checkUserExistence(userId: String): Flow<Boolean> {
+        return callbackFlow {
+            val query = userRef.child(userId)
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    trySend(snapshot.exists())
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    trySend(false)
+                }
+            }
+
+            query.addValueEventListener(listener)
+
+            awaitClose {
+                query.removeEventListener(listener)
+            }
+        }
+    }
 
     suspend fun addUser(userData: UserDataClass) : String {
         return suspendCancellableCoroutine { continuation ->

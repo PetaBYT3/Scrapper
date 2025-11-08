@@ -9,5 +9,5 @@ data class LasikResult(
     val regencyName: String,
     val subdistrictName: String,
     val wardName: String,
-    val isDataValid: String,
+    val lasikResult: String,
 )
