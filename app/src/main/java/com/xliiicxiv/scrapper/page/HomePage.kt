@@ -17,7 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.rounded.Start
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,11 +31,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.xliiicxiv.scrapper.action.AdminAction
 import com.xliiicxiv.scrapper.action.HomeAction
 import com.xliiicxiv.scrapper.route.Route
 import com.xliiicxiv.scrapper.state.HomeState
@@ -43,6 +48,8 @@ import com.xliiicxiv.scrapper.template.CustomTextTitle
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
 import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmation
+import com.xliiicxiv.scrapper.util.CustomBottomSheetConfirmationComposable
+import com.xliiicxiv.scrapper.util.CustomBottomSheetMessageComposable
 import com.xliiicxiv.scrapper.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -65,6 +72,69 @@ fun HomePage(
 
     BackHandler(enabled = true) {}
 
+    if (state.profileBottomSheet) {
+        CustomBottomSheetMessageComposable(
+            title = "Profile",
+            content = {
+                Card() {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column() {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.userData?.userName ?: "")
+                            }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Password,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.userData?.userPassword ?: "")
+                            }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AdminPanelSettings,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.userData?.userRole ?: "")
+                            }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Android,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.userData?.androidId?.ifBlank { "No Android ID !" } ?: "No Android ID !")
+                            }
+                        }
+                    }
+                }
+            },
+            onDismiss = { onAction(HomeAction.ProfileBottomSheet) },
+        )
+    }
+
     if (state.logoutBottomSheet) {
         CustomBottomSheetConfirmation(
             title = "Logout",
@@ -79,7 +149,6 @@ fun HomePage(
             onCancel = { onAction(HomeAction.LogoutBottomSheet) }
         )
     }
-
 }
 
 @Composable
@@ -131,6 +200,10 @@ private fun TopBar(
                         onClick = { navController.navigate(Route.AdminPage) }
                     )
                 }
+            )
+            CustomIconButton(
+                imageVector = Icons.Filled.Person,
+                onClick = { onAction(HomeAction.ProfileBottomSheet) }
             )
             CustomIconButton(
                 imageVector = Icons.Filled.Logout,

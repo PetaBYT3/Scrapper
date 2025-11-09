@@ -1,6 +1,5 @@
 package com.xliiicxiv.scrapper.viewmodel
 
-import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Warning
@@ -12,7 +11,6 @@ import com.xliiicxiv.scrapper.action.AdminAction
 import com.xliiicxiv.scrapper.dataclass.UserDataClass
 import com.xliiicxiv.scrapper.datastore.DataStore
 import com.xliiicxiv.scrapper.repository.FirebaseRepository
-import com.xliiicxiv.scrapper.route.Route
 import com.xliiicxiv.scrapper.state.AdminState
 import com.xliiicxiv.scrapper.string.isExist
 import com.xliiicxiv.scrapper.string.isFail
@@ -20,9 +18,7 @@ import com.xliiicxiv.scrapper.string.isSuccess
 import com.xliiicxiv.scrapper.ui.theme.Success
 import com.xliiicxiv.scrapper.ui.theme.Warning
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -81,7 +77,8 @@ class AdminViewModel(
                         userId = "",
                         userName = _state.value.userName,
                         userPassword = _state.value.userPassword,
-                        userRole = _state.value.userRole
+                        userRole = _state.value.userRole,
+                        androidId = ""
                     )
                     val firebaseResult = firebaseRepository.addUser(userData)
 
@@ -117,18 +114,26 @@ class AdminViewModel(
             }
             is AdminAction.DeleteBottomSheet -> {
                 _state.update { it.copy(
-                    deleteBottomSheet = !it.deleteBottomSheet,
+                    deleteUserBottomSheet = !it.deleteUserBottomSheet,
                     userToDelete = action.userData
                 ) }
-
-                if (!_state.value.deleteBottomSheet) {
-                    _state.update { it.copy(userToDelete = null) }
-                }
             }
             AdminAction.DeleteUser -> {
                 val userToDelete = _state.value.userToDelete
                 if (userToDelete != null) {
                     firebaseRepository.deleteUser(userToDelete)
+                }
+            }
+            is AdminAction.DeleteAndroidIdBottomSheet -> {
+                _state.update { it.copy(
+                    deleteAndroidIdBottomSheet = !it.deleteAndroidIdBottomSheet,
+                    androidIdToDelete = action.userData
+                ) }
+            }
+            AdminAction.DeleteAndroidId -> {
+                val userToDelete = _state.value.androidIdToDelete
+                if (userToDelete != null) {
+                    firebaseRepository.deleteAndroidId(userToDelete)
                 }
             }
             is AdminAction.MessageDialog -> {

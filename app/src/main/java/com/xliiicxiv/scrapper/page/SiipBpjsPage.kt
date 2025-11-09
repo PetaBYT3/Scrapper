@@ -147,13 +147,21 @@ fun SiipBpjsPage(
         CustomBottomSheetMessageComposable(
             title = "How To Use ?",
             content = {
-                CustomTextTitle(text = "How to start the SIIP BPJS auto check ?")
-                VerticalSpacer(5)
-                CustomTextContent(text = "1. Wait web page to be loaded\n2. Login into SIIP BPJS web\n3. Select .xlsx file\n4. Click start button")
-                VerticalSpacer(10)
-                CustomTextTitle(text = "Where the result saved ?")
-                VerticalSpacer(5)
-                CustomTextContent(text = "Documents / Auto Checker / Siip BPJS")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(15.dp)
+                    ) {
+                        CustomTextContent(text = "How to start the SIIP BPJS auto check ?")
+                        CustomTextContent(text = "1. Wait web page to be loaded\n2. Login into SIIP BPJS web\n3. Select .xlsx file\n4. Click start button")
+                        VerticalSpacer(10)
+                        CustomTextContent(text = "Where the result saved ?")
+                        CustomTextContent(text = "Documents / Auto Checker / Siip BPJS")
+                    }
+                }
             },
             onDismiss = { onAction(SiipBpjsAction.QuestionBottomSheet) }
         )

@@ -8,6 +8,8 @@ data class HomeState(
 
     val userData: UserDataClass? = null,
 
+    val profileBottomSheet: Boolean = false,
+
     val logoutBottomSheet: Boolean = false
 
 )

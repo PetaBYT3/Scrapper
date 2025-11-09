@@ -15,8 +15,11 @@ data class AdminState(
 
     val addBottomSheet: Boolean = false,
 
-    val deleteBottomSheet: Boolean = false,
+    val deleteUserBottomSheet: Boolean = false,
     val userToDelete: UserDataClass? = null,
+
+    val deleteAndroidIdBottomSheet: Boolean = false,
+    val androidIdToDelete: UserDataClass? = null,
 
     val userName: String = "",
     val userPassword: String = "",

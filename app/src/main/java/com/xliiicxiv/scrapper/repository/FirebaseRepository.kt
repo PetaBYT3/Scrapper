@@ -25,9 +25,11 @@ class FirebaseRepository {
 
     suspend fun login(
         userName: String,
-        userPassword: String
+        userPassword: String,
+        androidId: String
     ) : LoginResult {
         return suspendCancellableCoroutine { continuation ->
+            val query = userRef.orderByChild("userName").equalTo(userName)
             val userNameListener = object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     if (continuation.isActive) {
@@ -36,7 +38,15 @@ class FirebaseRepository {
                             val userData = userSnapshot.getValue(UserDataClass::class.java)
                             if (userData != null) {
                                 if (userData.userPassword == userPassword) {
-                                    continuation.resume(LoginResult.Success(userData.userId))
+                                    if (userData.androidId == "" || userData.androidId == androidId) {
+                                        val update = mapOf(
+                                            "androidId" to androidId
+                                        )
+                                        userSnapshot.ref.updateChildren(update)
+                                        continuation.resume(LoginResult.Success(userData.userId))
+                                    } else {
+                                        continuation.resume((LoginResult.DifferentAndroidId))
+                                    }
                                 } else {
                                     continuation.resume((LoginResult.Fail))
                                 }
@@ -53,7 +63,8 @@ class FirebaseRepository {
                     continuation.resume((LoginResult.Fail))
                 }
             }
-            userRef.orderByChild("userName").equalTo(userName).addListenerForSingleValueEvent(userNameListener)
+
+            query.addListenerForSingleValueEvent(userNameListener)
         }
     }
 
@@ -166,6 +177,19 @@ class FirebaseRepository {
                 }
             })
         }
+    }
+
+    fun deleteAndroidId(userData: UserDataClass) {
+        val query = userRef.child(userData.userId)
+
+        val update = mapOf(
+            "userId" to userData.userId,
+            "userName" to userData.userName,
+            "userPassword" to userData.userPassword,
+            "userRole" to userData.userRole,
+            "androidId" to null
+        )
+        query.updateChildren(update)
     }
 
     fun deleteUser(userData: UserDataClass) {

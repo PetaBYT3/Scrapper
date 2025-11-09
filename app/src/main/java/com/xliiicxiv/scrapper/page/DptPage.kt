@@ -139,13 +139,21 @@ fun DptPage(
         CustomBottomSheetMessageComposable(
             title = "How To Use ?",
             content = {
-                CustomTextTitle(text = "How to start the DPT auto check ?")
-                VerticalSpacer(5)
-                CustomTextContent(text = "1. Wait until web page loaded\n2. Select .xlsx file\n3. Click start button")
-                VerticalSpacer(10)
-                CustomTextTitle(text = "Where the result saved ?")
-                VerticalSpacer(5)
-                CustomTextContent(text = "Documents / Auto Checker / DPT")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(15.dp)
+                    ) {
+                        CustomTextContent(text = "How to start the DPT auto check ?")
+                        CustomTextContent(text = "1. Wait until web page loaded\n2. Select .xlsx file\n3. Click start button")
+                        VerticalSpacer(10)
+                        CustomTextContent(text = "Where the result saved ?")
+                        CustomTextContent(text = "Documents / Auto Checker / DPT")
+                    }
+                }
             },
             onDismiss = { onAction(DptAction.QuestionBottomSheet) }
         )

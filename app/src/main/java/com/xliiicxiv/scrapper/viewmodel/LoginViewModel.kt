@@ -1,15 +1,20 @@
 package com.xliiicxiv.scrapper.viewmodel
 
+import android.annotation.SuppressLint
+import android.app.Application
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.LoginAction
 import com.xliiicxiv.scrapper.datastore.DataStore
 import com.xliiicxiv.scrapper.effect.LoginEffect
+import com.xliiicxiv.scrapper.effect.LoginEffect.*
+import com.xliiicxiv.scrapper.extension.getAndroidId
 import com.xliiicxiv.scrapper.repository.FirebaseRepository
 import com.xliiicxiv.scrapper.route.Route
 import com.xliiicxiv.scrapper.state.LoginState
@@ -28,8 +33,12 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(
     private val firebaseRepository: FirebaseRepository,
-    private val dataStore: DataStore
-) : ViewModel() {
+    private val dataStore: DataStore,
+    application: Application
+) : AndroidViewModel(application) {
+
+    @SuppressLint("StaticFieldLeak")
+    private val context = application.applicationContext
 
     private val _state = MutableStateFlow(LoginState())
     val state = _state.asStateFlow()
@@ -51,24 +60,32 @@ class LoginViewModel(
 
                     val userName = _state.value.username
                     val password = _state.value.password
-                    val loginResult = firebaseRepository.login(userName, password)
+                    val hardwareId = getAndroidId(context)
+                    val loginResult = firebaseRepository.login(userName, password, hardwareId)
 
                     when(loginResult) {
                         is LoginResult.Success -> {
                             showDialog(
                                 dialogColor = Success,
-                                iconDialog = Icons.Default.Check,
+                                iconDialog = Icons.Filled.Check,
                                 messageDialog = "Login successfully !"
                             )
                             dataStore.setUserId(loginResult.userId)
                             delay(500)
-                            _effect.emit(LoginEffect.Navigate(Route.HomePage))
+                            _effect.emit(Navigate(Route.HomePage))
                         }
                         LoginResult.Fail -> {
                             showDialog(
                                 dialogColor = Warning,
-                                iconDialog = Icons.Default.Warning,
+                                iconDialog = Icons.Filled.Warning,
                                 messageDialog = "Username or password incorrect !"
+                            )
+                        }
+                        LoginResult.DifferentAndroidId -> {
+                            showDialog(
+                                dialogColor = Warning,
+                                iconDialog = Icons.Filled.Warning,
+                                messageDialog = "Android ID not match, contact admin for help !"
                             )
                         }
                     }

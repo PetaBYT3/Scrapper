@@ -1,5 +1,6 @@
 package com.xliiicxiv.scrapper.page
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,10 +19,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.Card
@@ -46,10 +49,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.xliiicxiv.scrapper.action.AdminAction
 import com.xliiicxiv.scrapper.state.AdminState
+import com.xliiicxiv.scrapper.template.CustomDropDownMenu
 import com.xliiicxiv.scrapper.template.CustomIconButton
 import com.xliiicxiv.scrapper.template.CustomRadioButton
 import com.xliiicxiv.scrapper.template.CustomTextContent
 import com.xliiicxiv.scrapper.template.CustomTextField
+import com.xliiicxiv.scrapper.template.DropDownItem
 import com.xliiicxiv.scrapper.template.HorizontalSpacer
 import com.xliiicxiv.scrapper.template.VerticalSpacer
 import com.xliiicxiv.scrapper.ui.theme.Warning
@@ -161,7 +166,7 @@ fun AdminPage(
         )
     }
 
-    if (state.deleteBottomSheet) {
+    if (state.deleteUserBottomSheet) {
         CustomBottomSheetConfirmationComposable(
             title = "Delete User",
             content = {
@@ -205,12 +210,87 @@ fun AdminPage(
                                 HorizontalSpacer(15)
                                 CustomTextContent(text = state.userToDelete?.userRole ?: "")
                             }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Android,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.userToDelete?.androidId?.ifBlank { "No Android ID !" } ?: "No Android ID !")
+                            }
                         }
                     }
                 }
             },
             onConfirm = { onAction(AdminAction.DeleteUser) },
             onCancel = { onAction(AdminAction.DeleteBottomSheet(null)) }
+        )
+    }
+
+    if (state.deleteAndroidIdBottomSheet) {
+        CustomBottomSheetConfirmationComposable(
+            title = "Reset Android ID",
+            content = {
+                Card() {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column() {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.androidIdToDelete?.userName ?: "")
+                            }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Password,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.androidIdToDelete?.userPassword ?: "")
+                            }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AdminPanelSettings,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.androidIdToDelete?.userRole ?: "")
+                            }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Android,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = state.androidIdToDelete?.androidId?.ifBlank { "No Android ID !" } ?: "No Android ID !")
+                            }
+                        }
+                    }
+                }
+            },
+            onConfirm = { onAction(AdminAction.DeleteAndroidId) },
+            onCancel = { onAction(AdminAction.DeleteAndroidIdBottomSheet(null)) }
         )
     }
 }
@@ -285,13 +365,14 @@ private fun Content(
                 key = { userData -> userData.userId }
             ) { userData ->
                 Card() {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(15.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth(),
                     ) {
-                        Column() {
+                        Column(
+                            modifier = Modifier
+                                .padding(15.dp)
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -324,17 +405,42 @@ private fun Content(
                                 HorizontalSpacer(15)
                                 CustomTextContent(text = userData.userRole)
                             }
+                            VerticalSpacer(5)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Android,
+                                    contentDescription = null
+                                )
+                                HorizontalSpacer(15)
+                                CustomTextContent(text = userData.androidId.ifBlank { "No Android ID !" })
+                            }
                         }
-                        Spacer(Modifier.weight(1f))
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                        ) {
-                            CustomIconButton(
-                                imageVector = Icons.Filled.Delete,
-                                onClick = { onAction(AdminAction.DeleteBottomSheet(userData)) }
+                        val dropDownList = buildList {
+                            add(
+                                DropDownItem(
+                                    imageVector = Icons.Filled.Delete,
+                                    title = "Delete User",
+                                    onClick = { onAction(AdminAction.DeleteBottomSheet(userData)) }
+                                )
                             )
+                            if (userData.androidId.isNotBlank()) {
+                                add(
+                                    DropDownItem(
+                                        imageVector = Icons.Filled.RemoveCircle,
+                                        title = "Reset Android ID",
+                                        onClick = { onAction(AdminAction.DeleteAndroidIdBottomSheet(userData)) }
+                                    )
+                                )
+                            }
                         }
+                        CustomDropDownMenu(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 5.dp),
+                            dropDownList = dropDownList
+                        )
                     }
                 }
                 VerticalSpacer(10)

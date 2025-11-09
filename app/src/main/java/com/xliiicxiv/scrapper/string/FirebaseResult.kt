@@ -8,6 +8,7 @@ const val isExist = "exist"
 
 sealed class LoginResult {
     data class Success(val userId: String) : LoginResult()
+    data object DifferentAndroidId : LoginResult()
     data object Fail : LoginResult()
 }
 

@@ -143,17 +143,24 @@ fun LasikPage(
         CustomBottomSheetMessageComposable(
             title = "How To Use ?",
             content = {
-                CustomTextTitle(text = "How to start the LASIK auto check ?")
-                VerticalSpacer(5)
-                CustomTextContent(text = "1. Wait web to be loaded\n1. Select .xlsx file\n3. Click start button")
-                VerticalSpacer(10)
-                CustomTextTitle(text = "Note")
-                VerticalSpacer(5)
-                CustomTextContent(text = "For better result, before you start the automation you better close the banner or pop-up window that appear after at first load")
-                VerticalSpacer(10)
-                CustomTextTitle(text = "Where the result saved ?")
-                VerticalSpacer(5)
-                CustomTextContent(text = "Documents / Auto Checker / Lasik")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(15.dp)
+                    ) {
+                        CustomTextContent(text = "How to start the LASIK auto check ?")
+                        CustomTextContent(text = "1. Wait web to be loaded\n1. Select .xlsx file\n3. Click start button")
+                        VerticalSpacer(10)
+                        CustomTextContent(text = "Note !")
+                        CustomTextContent(text = "For better result, before you start the automation you better close the banner or pop-up window that appear after at first load")
+                        VerticalSpacer(10)
+                        CustomTextContent(text = "Where the result saved ?")
+                        CustomTextContent(text = "Documents / Auto Checker / Lasik")
+                    }
+                }
             },
             onDismiss = { onAction(LasikAction.QuestionBottomSheet) }
         )

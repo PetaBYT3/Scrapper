@@ -26,7 +26,6 @@ class HomeViewModel(
                 _state.update { it.copy(userId = userId) }
                 firebaseRepository.getUserById(userId).collect { userData ->
                     _state.update { it.copy(userData = userData) }
-                    Log.d("HomeViewModel", "User data: ${userData}")
                 }
             }
         }
@@ -36,6 +35,9 @@ class HomeViewModel(
         when (action) {
             HomeAction.LogoutBottomSheet -> {
                 _state.update { it.copy(logoutBottomSheet = !it.logoutBottomSheet) }
+            }
+            HomeAction.ProfileBottomSheet -> {
+                _state.update { it.copy(profileBottomSheet = !it.profileBottomSheet) }
             }
             HomeAction.Logout -> {
                 viewModelScope.launch {

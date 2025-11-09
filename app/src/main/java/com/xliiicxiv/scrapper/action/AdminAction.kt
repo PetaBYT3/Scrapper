@@ -14,6 +14,10 @@ sealed interface AdminAction {
 
     data object DeleteUser : AdminAction
 
+    data class DeleteAndroidIdBottomSheet(val userData: UserDataClass?) : AdminAction
+
+    data object DeleteAndroidId : AdminAction
+
     data class UserName(val name: String) : AdminAction
 
     data class UserPassword(val password: String) : AdminAction
