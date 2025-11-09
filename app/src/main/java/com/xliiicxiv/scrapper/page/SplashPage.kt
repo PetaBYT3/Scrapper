@@ -1,9 +1,11 @@
 package com.xliiicxiv.scrapper.page
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -12,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,10 +49,11 @@ fun SplashPage(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
+                Image(
                     modifier = Modifier
-                        .size(100.dp),
-                    painter = painterResource(R.drawable.outline_check_circle_24),
+                        .size(110.dp)
+                        .clip(RoundedCornerShape(50)),
+                    painter = painterResource(R.drawable.speedrunner),
                     contentDescription = null
                 )
             }

@@ -142,7 +142,7 @@ private fun Content(
         var isPasswordVisible by rememberSaveable { mutableStateOf(true) }
 
         Spacer(Modifier.height(100.dp))
-        CustomTextMedium(text = "Auto Check")
+        CustomTextMedium(text = "Speed Runner")
         CustomTextContent(text = "SIIP, DPT, and LASIK auto checker")
         VerticalSpacer(10)
         CustomTextField(
