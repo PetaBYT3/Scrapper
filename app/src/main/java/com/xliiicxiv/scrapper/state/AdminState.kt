@@ -9,6 +9,8 @@ import com.xliiicxiv.scrapper.ui.theme.Warning
 
 data class AdminState(
 
+    val userData: UserDataClass? = null,
+
     val userList: List<UserDataClass> = emptyList(),
 
     val addBottomSheet: Boolean = false,

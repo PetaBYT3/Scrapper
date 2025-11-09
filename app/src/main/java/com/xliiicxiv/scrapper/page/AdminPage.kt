@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -71,6 +74,14 @@ fun AdminPage(
         state = state,
         onAction = onAction
     )
+
+    LaunchedEffect(state.userData) {
+        if (state.userData?.userRole == null) return@LaunchedEffect
+
+        if (state.userData?.userRole != "Admin") {
+            navController.popBackStack()
+        }
+    }
 
     if (state.addBottomSheet) {
         val addSheetState = rememberModalBottomSheetState(
@@ -211,7 +222,11 @@ private fun Scaffold(
     onAction: (AdminAction) -> Unit
 ) {
     Scaffold(
-        topBar = { TopBar() },
+        topBar = {
+            TopBar(
+                navController = navController
+            )
+        },
         content = { innerPadding ->
             Column(
                 modifier = Modifier
@@ -236,12 +251,14 @@ private fun Scaffold(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar() {
+private fun TopBar(
+    navController: NavController
+) {
     TopAppBar(
         navigationIcon = {
             CustomIconButton(
                 imageVector = Icons.Rounded.ArrowBack,
-                onClick = {}
+                onClick = { navController.popBackStack() }
             )
         },
         title = { Text(text = "Admin Panel") }
@@ -254,7 +271,7 @@ private fun Content(
     state: AdminState,
     onAction: (AdminAction) -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 15.dp)
@@ -321,6 +338,23 @@ private fun Content(
                     }
                 }
                 VerticalSpacer(10)
+            }
+        }
+
+        if (state.userList.isEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                   imageVector = Icons.Filled.Warning,
+                   contentDescription = null,
+                )
+                HorizontalSpacer(10)
+                CustomTextContent(text = "No User Found !")
             }
         }
     }

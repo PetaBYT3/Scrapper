@@ -153,7 +153,7 @@ fun SiipBpjsPage(
                 VerticalSpacer(10)
                 CustomTextTitle(text = "Where the result saved ?")
                 VerticalSpacer(5)
-                CustomTextContent(text = "Documents / Scrapper / Siip BPJS")
+                CustomTextContent(text = "Documents / Auto Checker / Siip BPJS")
             },
             onDismiss = { onAction(SiipBpjsAction.QuestionBottomSheet) }
         )

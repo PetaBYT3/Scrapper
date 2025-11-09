@@ -2,6 +2,8 @@ package com.xliiicxiv.scrapper.page
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -119,18 +121,20 @@ private fun TopBar(
         navigationIcon = {},
         title = { Text(text = "Home") },
         actions = {
-            CustomIconButton(
-                imageVector = Icons.Filled.AdminPanelSettings,
-                onClick = { navController.navigate(Route.AdminPage) }
-            )
             AnimatedVisibility(
-                visible = state.userData?.userRole == "Admin",
+                enter = fadeIn(),
+                exit = fadeOut(),
+                visible = state.userData?.userRole?.contains("Admin", ignoreCase = true) == true,
                 content = {
                     CustomIconButton(
-                        imageVector = Icons.Filled.Logout,
-                        onClick = { onAction(HomeAction.LogoutBottomSheet) }
+                        imageVector = Icons.Filled.AdminPanelSettings,
+                        onClick = { navController.navigate(Route.AdminPage) }
                     )
                 }
+            )
+            CustomIconButton(
+                imageVector = Icons.Filled.Logout,
+                onClick = { onAction(HomeAction.LogoutBottomSheet) }
             )
         }
     )

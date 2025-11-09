@@ -153,7 +153,7 @@ fun LasikPage(
                 VerticalSpacer(10)
                 CustomTextTitle(text = "Where the result saved ?")
                 VerticalSpacer(5)
-                CustomTextContent(text = "Documents / Scrapper / Lasik")
+                CustomTextContent(text = "Documents / Auto Checker / Lasik")
             },
             onDismiss = { onAction(LasikAction.QuestionBottomSheet) }
         )

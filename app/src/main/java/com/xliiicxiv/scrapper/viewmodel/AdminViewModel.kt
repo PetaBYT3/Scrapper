@@ -10,7 +10,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xliiicxiv.scrapper.action.AdminAction
 import com.xliiicxiv.scrapper.dataclass.UserDataClass
+import com.xliiicxiv.scrapper.datastore.DataStore
 import com.xliiicxiv.scrapper.repository.FirebaseRepository
+import com.xliiicxiv.scrapper.route.Route
 import com.xliiicxiv.scrapper.state.AdminState
 import com.xliiicxiv.scrapper.string.isExist
 import com.xliiicxiv.scrapper.string.isFail
@@ -18,22 +20,34 @@ import com.xliiicxiv.scrapper.string.isSuccess
 import com.xliiicxiv.scrapper.ui.theme.Success
 import com.xliiicxiv.scrapper.ui.theme.Warning
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class AdminViewModel(
+    private val dataStore: DataStore,
     private val firebaseRepository: FirebaseRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AdminState())
     val state = _state.asStateFlow()
 
+
     init {
         viewModelScope.launch {
             firebaseRepository.getUser().collect { userList ->
                 _state.update { it.copy(userList = userList) }
+            }
+        }
+
+        viewModelScope.launch {
+            dataStore.getUserId.collect { userId ->
+                firebaseRepository.getUserById(userId).collect { userData ->
+                    _state.update { it.copy(userData = userData) }
+                }
             }
         }
     }

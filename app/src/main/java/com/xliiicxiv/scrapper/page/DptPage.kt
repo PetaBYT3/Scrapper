@@ -145,7 +145,7 @@ fun DptPage(
                 VerticalSpacer(10)
                 CustomTextTitle(text = "Where the result saved ?")
                 VerticalSpacer(5)
-                CustomTextContent(text = "Documents / Scrapper / DPT")
+                CustomTextContent(text = "Documents / Auto Checker / DPT")
             },
             onDismiss = { onAction(DptAction.QuestionBottomSheet) }
         )
