@@ -5,6 +5,11 @@ fun removeDoubleQuote(string: String) : String {
     return removedQuote
 }
 
+fun getFullName(string: String) : String {
+    val fullName = string.replace("Nama Pemilih\\n", "")
+    return fullName
+}
+
 fun getRegencyName(string: String) : String {
     val regencyName = string.replace("Kabupaten", "")
     return regencyName

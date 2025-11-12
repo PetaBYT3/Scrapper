@@ -652,7 +652,7 @@ private fun AutoCheck(
 
             val result = SiipResult(
                 kpjNumber = kpjNumber,
-                fullName = fullName,
+                fullName = "",
                 nikNumber = nikNumber,
                 birthDate = birthDate,
                 email = email

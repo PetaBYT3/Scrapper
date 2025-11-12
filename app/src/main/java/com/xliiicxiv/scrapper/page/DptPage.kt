@@ -2,6 +2,7 @@ package com.xliiicxiv.scrapper.page
 
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -76,6 +77,7 @@ import com.xliiicxiv.scrapper.extension.AdvanceWebViewControl
 import com.xliiicxiv.scrapper.extension.awaitJavaScript
 import com.xliiicxiv.scrapper.extension.exportToExcelDpt
 import com.xliiicxiv.scrapper.extension.getCurrentTime
+import com.xliiicxiv.scrapper.extension.getFullName
 import com.xliiicxiv.scrapper.extension.getRegencyName
 import com.xliiicxiv.scrapper.extension.getSubdistrictName
 import com.xliiicxiv.scrapper.extension.getWardName
@@ -513,6 +515,7 @@ private fun AutoCheck(
     state: DptState,
     onAction: (DptAction) -> Unit
 ) {
+    var fullName by remember { mutableStateOf("") }
     var regencyName by remember { mutableStateOf("") }
     var subdistrictName by remember { mutableStateOf("") }
     var wardName by remember { mutableStateOf("") }
@@ -523,6 +526,7 @@ private fun AutoCheck(
         if (!state.isStarted) return@LaunchedEffect
 
         for (rawList in state.rawList) {
+            fullName = ""
             regencyName = ""
             subdistrictName = ""
             wardName = ""
@@ -560,20 +564,35 @@ private fun AutoCheck(
             """.trimIndent()
             advanceWebViewControl.awaitJavaScript(elementFind)
 
-            delay(5_000)
+            delay(2_000)
 
             val jsCheck = "document.querySelector('.watermarked') ? 'YES' : 'NO';"
             advanceWebViewControl.evaluateJavascript(jsCheck) { result ->
                 isDataFound = result.contains("YES")
             }
 
-            delay(5_000)
+            delay(2_000)
 
             if (!isDataFound) {
                 onAction(DptAction.Process)
                 onAction(DptAction.Failure)
                 continue
             }
+
+            val fullNameElement = """
+                (function() {
+                    const allElements = document.querySelectorAll('*');
+                    const labelElement = Array.from(allElements).find(el => el.textContent.trim() === 'Nama Pemilih');
+                    const parentElement = labelElement.parentElement;
+                    
+                    return parentElement.innerText?.trim();
+                })();
+            """.trimIndent()
+            val fullNameResult = advanceWebViewControl.awaitJavaScript(fullNameElement)
+
+            val removedQuoteFullName = removeDoubleQuote(fullNameResult)
+            val filteredFullName = getFullName(removedQuoteFullName)
+            fullName = filteredFullName
 
             val regencyElement = "document.querySelector('.row--left')?.textContent?.trim()"
             val regencyResult = advanceWebViewControl.awaitJavaScript(regencyElement)
@@ -599,7 +618,7 @@ private fun AutoCheck(
             val result = DptResult(
                 kpjNumber = rawList.kpjNumber,
                 nikNumber = rawList.nikNumber,
-                fullName = rawList.fullName,
+                fullName = fullName,
                 birthDate = rawList.birthDate,
                 email = rawList.email,
                 regencyName = regencyName,
