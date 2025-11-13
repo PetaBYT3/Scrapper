@@ -22,6 +22,7 @@ data class DropDownItem(
 )
 @Composable
 fun CustomDropDownMenu(
+    icon: ImageVector,
     modifier: Modifier = Modifier,
     dropDownList: List<DropDownItem>
 ) {
@@ -31,7 +32,7 @@ fun CustomDropDownMenu(
         modifier = modifier
     ) {
         CustomIconButton(
-            imageVector = Icons.Filled.MoreVert,
+            imageVector = icon,
             onClick = { expanded = true }
         )
 

@@ -6,6 +6,10 @@ import com.xliiicxiv.scrapper.dataclass.UserDataClass
 
 sealed interface AdminAction {
 
+    data object IsSearchActive : AdminAction
+
+    data class SearchText(val text: String) : AdminAction
+
     data object AddBottomSheet : AdminAction
 
     data object AddUser : AdminAction

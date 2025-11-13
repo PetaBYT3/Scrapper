@@ -31,11 +31,13 @@ class AdminViewModel(
     private val _state = MutableStateFlow(AdminState())
     val state = _state.asStateFlow()
 
-
     init {
         viewModelScope.launch {
             firebaseRepository.getUser().collect { userList ->
-                _state.update { it.copy(userList = userList) }
+                _state.update { it.copy(
+                    initialUserList = userList,
+                    filteredUserList = filteredUserList("", userList)
+                ) }
             }
         }
 
@@ -50,6 +52,15 @@ class AdminViewModel(
 
     fun onAction(action: AdminAction) {
         when (action) {
+            AdminAction.IsSearchActive -> {
+                _state.update { it.copy(isSearchActive = !it.isSearchActive) }
+            }
+            is AdminAction.SearchText -> {
+                _state.update { it.copy(
+                    searchText = action.text,
+                    filteredUserList = filteredUserList(action.text, it.initialUserList)
+                ) }
+            }
             is AdminAction.UserName -> {
                 _state.update { it.copy(userName = action.name) }
             }
@@ -167,6 +178,19 @@ class AdminViewModel(
             ) }
             delay(5_000)
             _state.update { it.copy(dialogVisibility = false) }
+        }
+    }
+
+    private fun filteredUserList(
+        searchText: String,
+        initialUserList: List<UserDataClass>
+    ) : List<UserDataClass> {
+        return if (searchText.isBlank()) {
+            initialUserList
+        } else {
+            initialUserList.filter {
+                it.userName.contains(searchText, ignoreCase = true)
+            }
         }
     }
 }

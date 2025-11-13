@@ -648,7 +648,11 @@ private fun AutoCheck(
             val emailResult = webViewNavigator.awaitJavaScript(emailElement)
 
             val removedQuoteEmail = removeDoubleQuote(emailResult)
-            email = removedQuoteEmail
+            if (removedQuoteEmail.contains("@gmail.com", ignoreCase = true)) {
+                email = ""
+            } else {
+                email = removedQuoteEmail
+            }
 
             val result = SiipResult(
                 kpjNumber = kpjNumber,

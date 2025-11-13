@@ -11,7 +11,11 @@ data class AdminState(
 
     val userData: UserDataClass? = null,
 
-    val userList: List<UserDataClass> = emptyList(),
+    val isSearchActive: Boolean = false,
+    val searchText: String = "",
+
+    val initialUserList: List<UserDataClass> = emptyList(),
+    val filteredUserList: List<UserDataClass> = emptyList(),
 
     val addBottomSheet: Boolean = false,
 

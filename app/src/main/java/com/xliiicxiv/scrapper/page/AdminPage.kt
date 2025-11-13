@@ -1,6 +1,5 @@
 package com.xliiicxiv.scrapper.page
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,10 +8,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,11 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Android
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.Card
@@ -33,16 +34,22 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -302,9 +309,13 @@ private fun Scaffold(
     onAction: (AdminAction) -> Unit
 ) {
     Scaffold(
+        modifier = Modifier
+            .imePadding(),
         topBar = {
             TopBar(
-                navController = navController
+                navController = navController,
+                state = state,
+                onAction = onAction
             )
         },
         content = { innerPadding ->
@@ -332,8 +343,11 @@ private fun Scaffold(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopBar(
-    navController: NavController
+    navController: NavController,
+    state: AdminState,
+    onAction: (AdminAction) -> Unit
 ) {
+    val focusRequester = remember { FocusRequester() }
     TopAppBar(
         navigationIcon = {
             CustomIconButton(
@@ -341,10 +355,69 @@ private fun TopBar(
                 onClick = { navController.popBackStack() }
             )
         },
-        title = { Text(text = "Admin Panel") }
+        title = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                Text(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart),
+                    text = "Admin Panel"
+                )
+                AnimatedVisibility(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    visible = state.isSearchActive,
+                    content = {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+                            TextField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester),
+                                value = state.searchText,
+                                onValueChange = { onAction(AdminAction.SearchText(it)) },
+                                placeholder = {
+                                    Text(
+                                        text = "Search Username...",
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                },
+                                singleLine = true,
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                )
+                            )
+                        }
+                        LaunchedEffect(Unit) {
+                            focusRequester.requestFocus()
+                        }
+                    }
+                )
+            }
+        },
+        actions = {
+            CustomIconButton(
+                imageVector = if (state.isSearchActive) Icons.Filled.Close else Icons.Filled.Search,
+                onClick = {
+                    onAction(AdminAction.IsSearchActive)
+                    onAction(AdminAction.SearchText(""))
+                }
+            )
+        }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
     navController: NavController,
@@ -356,12 +429,9 @@ private fun Content(
             .fillMaxSize()
             .padding(horizontal = 15.dp)
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
+        LazyColumn() {
             items(
-                items = state.userList,
+                items = state.filteredUserList,
                 key = { userData -> userData.userId }
             ) { userData ->
                 Card() {
@@ -436,6 +506,7 @@ private fun Content(
                             }
                         }
                         CustomDropDownMenu(
+                            icon = Icons.Filled.MoreVert,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(top = 5.dp),
@@ -447,7 +518,7 @@ private fun Content(
             }
         }
 
-        if (state.userList.isEmpty()) {
+        if (state.initialUserList.isEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -456,8 +527,8 @@ private fun Content(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                   imageVector = Icons.Filled.Warning,
-                   contentDescription = null,
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = null,
                 )
                 HorizontalSpacer(10)
                 CustomTextContent(text = "No User Found !")
